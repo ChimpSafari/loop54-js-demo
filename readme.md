@@ -19,9 +19,9 @@ This will install the watch tool, watch code folders for change and transpile if
 - source files in /src
 - rebuild triggered on save in /src directory, refresh browser to see changes after build
 - Adaptable to your HTML setup in /src/index.js
--- Change ID:s and classes
--- Change engine URL to point to your engine (dev or prod)
--- Copy or change code as needed, reference implementation
+..- Change ID:s and classes
+..- Change engine URL to point to your engine (dev or prod)
+..- Copy or change code as needed, reference implementation
 
 
 
