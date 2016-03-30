@@ -52,7 +52,7 @@ var config = {
   devMode: true,
   cacheAutoComplete: false,
   autoCompleteFacetingParameter: 'Faceting.Categories',
-  productTitleAttribute: 'productName',
+  productTitleAttribute: 'Title',
   productDescriptionAttribute: 'Description',
   productImageUrlAttributes: ['ImageUrl'],
   productImageUrl: '$1',
