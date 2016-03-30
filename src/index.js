@@ -156,11 +156,14 @@ var demo = {
   createEvent: function(entity, eventType) {
 
     var req = {
-      EntityType: entity.EntityType, 
-      ExternalId: entity.ExternalId,
-      Events: [event],
+      Events: [{
+        Type: eventType,
+        Entity: {
+          EntityType: entity.EntityType, 
+          ExternalId: entity.ExternalId,
+        }
+      }],
       QuestName: config.createEventsQuest,
-      Type: eventType
     };
 
     lib.getResponse(req, function(response) {

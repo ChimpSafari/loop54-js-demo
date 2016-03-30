@@ -1,7 +1,7 @@
 {
   "name": "loop54-js-demo",
-  "version": "0.9.3",
-  "description": "Frontend demo of Loop54 functionallity useing JS-lib. Using jQuery.",
+  "version": "0.9.5",
+  "description": "Frontend demo of Loop54 functionallity using JS-lib. Using jQuery.",
   "main": "src/index.js",
   "scripts": {
     "dev": "npm run watch:demo & npm run server",
@@ -28,6 +28,6 @@
     "browserify": "^12.0.1",
     "chai": "^3.4.1",
     "express": "^4.13.3",
-    "loop54-js-lib": "0.0.4"
+    "loop54-js-lib": "0.1.6"
   }
 }

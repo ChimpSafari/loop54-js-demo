@@ -239,9 +239,11 @@ var Loop54 = {
 
     //legacy mode for engines that expect the quest name to be in the JSON data
     if (this.config.use25Url) {
-      requestObj[questName] = params;
+      requestObj[params.QuestName] = _extends({}, params);
+      delete requestObj[params.QuestName].QuestName;
     } else {
-      requestObj = params;
+      requestObj = _extends({}, params);
+      delete requestObj.QuestName;
     }
 
     return JSON.stringify(requestObj);
@@ -1173,6 +1175,8 @@ module.exports = {
 
 // ES6 or using requre.js: import/require lib and use
 
+var _demo;
+
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
 var _loop54JsLib = require('loop54-js-lib');
@@ -1184,6 +1188,8 @@ var _render = require('./render.js');
 var _render2 = _interopRequireDefault(_render);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
@@ -1312,7 +1318,7 @@ $(document).ready(function () {
 
 var utils = require('./utils.js');
 
-var demo = {
+var demo = (_demo = {
   autoCompleteQueries: [],
   fetchingAutoComplete: false,
   instantTimer: null,
@@ -1327,11 +1333,14 @@ var demo = {
   createEvent: function createEvent(entity, eventType) {
 
     var req = {
-      EntityType: entity.EntityType,
-      ExternalId: entity.ExternalId,
-      Events: [event],
-      QuestName: config.createEventsQuest,
-      Type: eventType
+      Events: [{
+        Type: eventType,
+        Entity: {
+          EntityType: entity.EntityType,
+          ExternalId: entity.ExternalId
+        }
+      }],
+      QuestName: config.createEventsQuest
     };
 
     _loop54JsLib2.default.getResponse(req, function (response) {
@@ -1355,404 +1364,339 @@ var demo = {
     }
 
     return req;
-  },
+  }
 
-  previousSearch: {},
+}, _defineProperty(_demo, 'previousSearch', {}), _defineProperty(_demo, 'autocomplete', function autocomplete(req, res) {
 
-  autocomplete: function autocomplete(req, res) {
+  var req,
+      self = this,
+      cache = this.autocompleteCache;
 
-    var req,
-        self = this,
-        cache = this.autocompleteCache;
+  function processResponse(response) {
 
-    function processResponse(response) {
-
-      if (!response.success && config.DevMode) {
-        alert(response.errorMessage);
-      }
-
-      var data = response.data;
-
-      if (data.AutoComplete.length > 0) {
-        res(self.formatAutoCompleteData(data));
-      } else {
-        res([]);
-      }
+    if (!response.success && config.DevMode) {
+      alert(response.errorMessage);
     }
 
-    if (cache[req.term]) {
-      processResponse(cache[req.term]);
-    }
-
-    req = this.getAutoCompeteRequest({ query: req.term });
-
-    _loop54JsLib2.default.getResponse(req).then(function (response) {
-
-      cache[req.term] = response;
-
-      processResponse(response);
-    });
-  },
-
-  formatAutoCompleteData: function formatAutoCompleteData(data) {
-    var _ret;
-
-    var ret, facets;
-
-    ret = data.AutoComplete.map(function (x) {
-      return {
-        value: x.Key,
-        label: x.Key
-      };
-    });
-
-    ret = ret.filter(function (x) {
-      return x.value !== data.AutoCompleteFacetingString;
-    });
-
-    facets = data.AutoCompleteFacets.map(function (x) {
-      return {
-        label: data.AutoCompleteFacetingString,
-        value: data.AutoCompleteFacetingString,
-        facet: x.Key
-      };
-    });
-
-    (_ret = ret).unshift.apply(_ret, _toConsumableArray(facets));
-
-    return ret;
-  },
-
-  getSearchRequest: function getSearchRequest(options) {
-    var req = {
-      QuestName: config.searchQuest,
-      QueryString: options.query,
-      RelatedQueries_FromIndex: 0,
-      RelatedQueries_ToIndex: 5,
-      PreventReSearch: options.preventReSearch || false
-    };
-
-    if (config.directResultsPageSize > 0) {
-      req.DirectResults_FromIndex = config.directResultsPageSize * options.page;
-      req.DirectResults_ToIndex = (options.page + 1) * config.directResultsPageSize - 1;
-    }
-
-    if (config.recommendedResultsPageSize > 0) {
-      req.RecommendedResults_FromIndex = config.recommendedResultsPageSize * options.page;
-      req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
-    }
-
-    for (var i = 0; i < config.filters.length; i++) {
-      if (this.filters[config.filters[i].RequestParameter]) {
-        req[config.filters[i].RequestParameter] = this.filters[config.filters[i].RequestParameter];
-      }
-    }
-
-    return req;
-  },
-
-  search: function search() {
-    var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
-
-    var req = {},
-        self = this,
-        isContinuation;
-
-    if (options.clearFilters || options.facet) {
-      this.clearFilters();
-    }
-
-    if (options.facet) {
-      this.addFilter(config.autoCompleteFacetingParameter, options.facet);
-    }
-
-    if (options.clearSearch) {
-      render.clearSearch();
-    }
-
-    options = {
-      instant: options.instant || false,
-      preventReSearch: options.preventReSearch || false,
-      page: options.page || 0,
-      query: options.query
-    };
-
-    this.previousSearch = _extends({}, options);
-
-    isContinuation = options.page > 0 && config.continousScrolling;
-
-    if (!isContinuation) {
-      render.hidePopup();
-
-      if (!options.instant) {
-        render.hideAutocomplete();
-      }
-    }
-
-    req = this.getSearchRequest(options);
-
-    // utils.setHash({
-    //   config: config.Name,
-    //   page: req.search,
-    //   query: query
-    // });
-
-    $(guiConfig.inputSearch).val(options.query);
-
-    _loop54JsLib2.default.getResponse(req).then(function (response) {
-
-      if (!response.success && config.DevMode) {
-        alert(response.errorMessage);
-      }
-
-      var data = response.data;
-
-      self.previousSearch.totalItems = data.DirectResults_TotalItems;
-
-      render.clearSearch(isContinuation);
-
-      if (!data.MakesSense) {
-        render.showMakesNoSense(data.DirectResults, data.SpellingSuggestions, options.query, self.search.bind(self));
-      }
-
-      if (data.ReSearchQueryString) {
-        render.showReSearch(data.ReSearchQueryString, options.query, self.search.bind(self));
-      }
-
-      if (data.RelatedQueries && data.RelatedQueries.length > 0) {
-        render.addRelated(data.RelatedQueries, self.search.bind(self));
-      }
-
-      if (data.DirectResults && data.DirectResults.length > 0) {
-        render.directResults(data.DirectResults, data.DirectResults_TotalItems, isContinuation, self.createEvent);
-      }
-
-      if (data.RecommendedResults && data.RecommendedResults.length > 0) {
-        render.recommendedResults(data.RecommendedResults, isContinuation, self.createEvent);
-      } else if (options.page < 1) {
-        render.noRecommendedResults();
-      }
-
-      self.updateFilters(data);
-
-      if (config.continousScrolling) {
-        self.displayMore();
-      } else if (data.DirectResults_TotalItems > config.directResultsPageSize) {
-        self.updatePaging(data.DirectResults_TotalItems, options.page, self.previousSearch, self.search.bind(self));
-      }
-    });
-    // .catch( function (err) {
-    //         console.log('Error when processing response:')
-    //         console.log(err);
-    //       });
-  },
-
-  updatePaging: function updatePaging(totalItems, page, prevSearch, searchCallback) {
-
-    function showPage(p) {
-      if (p < 2) return 'show';
-
-      if (p > pages - 3) return 'show';
-
-      if (p > page - 2 && p < page + 2) return 'show';
-
-      if (p == 2) return 'dots';
-
-      if (p == pages - 3 && page != 0 && page != pages - 1) return 'dots';
-
-      return 'hide';
-    }
-
-    var pages = Math.ceil(totalItems / config.directResultsPageSize);
-
-    var pagesDiv = $('<div/>').addClass('pages').appendTo($('div#directresults'));
-
-    var i = 0;
-    for (i; i < pages; i++) {
-
-      var show = showPage(i);
-
-      if (show == 'show') {
-
-        $('<a/>').html(i + 1).data('page', i).addClass(page == i ? 'selected' : '').click(function () {
-
-          searchCallback(_extends({}, prevSearch, {
-            page: $(this).data('page')
-          }));
-        }).appendTo(pagesDiv);
-      } else if (show == 'dots') {
-        $('<span>...</span>').appendTo(pagesDiv);
-      }
-    }
-  },
-
-  displayMore: function displayMore() {
-    //there are more results available
-
-    var ps = this.previousSearch;
-
-    if (this.isBottomVisible()) {
-
-      if (ps.totalItems > (ps.page + 1) * config.directResultsPageSize) {
-        this.search({
-          query: ps.query,
-          instant: false,
-          preventReSearch: ps.preventReSearch,
-          page: ps.page + 1
-        });
-      } else if (ps.totalItems > config.directResultsPageSize && $(guiConfig.directResults).find('div.endofresults').length === 0) {
-        $(guiConfig.directResults).append($('<div/>').addClass('endofresults').html('No more results'));
-      }
-    }
-  },
-
-  updateFilters: function updateFilters(res) {
-
-    var self = this;
-
-    for (var i = 0; i < config.filters.length; i++) {
-
-      $('div#filter_' + config.filters[i].Name).empty();
-
-      var data = res[config.filters[i].ResponseParameter];
-
-      if (data && data.length > 0) {
-
-        var filterArray = this.filters[config.filters[i].RequestParameter];
-
-        if (!filterArray) {
-          filterArray = [];
-        }
-
-        var filterDiv = $('div#filter_' + config.filters[i].Name);
-        var div = $('<div/>').addClass('alwaysvisible').appendTo(filterDiv);
-
-        for (var j = 0; j < data.length; j++) {
-
-          if (j == 5) {
-
-            div = $('<div/>').addClass('hideable').appendTo(filterDiv);
-
-            if (this.visibleFilterDivs[config.filters[i].Name]) {
-              div.show();
-            }
-
-            $('<a/>').html(self.visibleFilterDivs[config.filters[i].Name] ? 'Hide' : 'Show all').addClass('showhide').data('div', div).data('filterName', config.filters[i].Name).click(function () {
-
-              if ($(this).data('div').is(':visible')) {
-
-                self.visibleFilterDivs[$(this).data('filterName')] = false;
-
-                $(this).data('div').hide();
-                $(this).html('Show all');
-              } else {
-
-                self.visibleFilterDivs[$(this).data('filterName')] = true;
-
-                $(this).data('div').show();
-                $(this).html('Hide');
-              }
-            }).appendTo(filterDiv);
-          }
-
-          div.append($('<a/>').html(data[j].Key + ' (' + data[j].Value + ')').data('filterkey', config.filters[i].RequestParameter).data('filtervalue', data[j].Key).click(function () {
-            if (!$(this).hasClass('selected')) {
-              self.addFilter($(this).data('filterkey'), $(this).data('filtervalue'));
-              $(this).addClass('selected');
-              self.searchAgain();
-            } else {
-              self.removeFilter($(this).data('filterkey'), $(this).data('filtervalue'));
-              $(this).removeClass('selected');
-              self.searchAgain();
-            }
-          }).addClass(filterArray.indexOf(data[j].Key) > -1 ? 'selected' : ''));
-        }
-      }
-    }
-  },
-
-  // JustSetHash: null,
-
-  // SetHash: function(newHash) {
-  //   this.JustSetHash = newHash;
-  //   location.hash = '#' + newHash;
-  // },
-
-  isBottomVisible: function isBottomVisible() {
-    var scroll = $(window).scrollTop();
-    var windowHeight = $(window).height();
-
-    var height = $(guiConfig.directResults).outerHeight() + $(guiConfig.directResults).offset().top;
-
-    return scroll + windowHeight >= height;
-  },
-
-  // hashChanged: function(previousHash, currentHash) {
-
-  //   if (currentHash) {
-
-  //     currentHash = decodeURI(currentHash);
-
-  //     var moveFunc = function() {
-  //       var type = utils.getHashValue('page', currentHash);
-
-  //       if (type === 'search') {
-
-  //         var query = this.getHashValue('query', currentHash);
-  //         this.search(query, false, false, 0);
-  //       }
-  //     };
-
-  //     //make sure we dont do anything if the hash was set by code, not the user
-  //     if (currentHash !== this.justSetHash) {
-
-  //       var configName = this.getHashValue('config', currentHash);
-
-  //       //no demo config loaded or new config does not match
-  //       // ???
-  //       if ( config === null || configName !== config.Name) {
-  //         this.loadDemoConfig(configName, moveFunc);
-  //       }
-  //       else {
-  //         moveFunc();
-  //       }
-  //     }
-  //   }
-  // }
-
-  clearFilters: function clearFilters() {
-    this.filters = {};
-  },
-
-  searchAgain: function searchAgain() {
-    this.search(_extends({}, this.previousSearch, { clearSearch: true, page: 0 }));
-  },
-
-  addFilter: function addFilter(key, value) {
-
-    if (!this.filters[key]) {
-      this.filters[key] = [];
-    }
-
-    this.filters[key].push(value);
-  },
-
-  removeFilter: function removeFilter(key, value) {
-
-    var param = this.filters[key];
-
-    if (!param) {
-      return;
-    }
-
-    var index = param.indexOf(value);
-
-    if (index > -1) {
-      param.splice(index, 1);
+    var data = response.data;
+
+    if (data.AutoComplete.length > 0) {
+      res(self.formatAutoCompleteData(data));
+    } else {
+      res([]);
     }
   }
 
-};
+  if (cache[req.term]) {
+    processResponse(cache[req.term]);
+  }
+
+  req = this.getAutoCompeteRequest({ query: req.term });
+
+  _loop54JsLib2.default.getResponse(req).then(function (response) {
+
+    cache[req.term] = response;
+
+    processResponse(response);
+  });
+}), _defineProperty(_demo, 'formatAutoCompleteData', function formatAutoCompleteData(data) {
+  var _ret;
+
+  var ret, facets;
+
+  ret = data.AutoComplete.map(function (x) {
+    return {
+      value: x.Key,
+      label: x.Key
+    };
+  });
+
+  ret = ret.filter(function (x) {
+    return x.value !== data.AutoCompleteFacetingString;
+  });
+
+  facets = data.AutoCompleteFacets.map(function (x) {
+    return {
+      label: data.AutoCompleteFacetingString,
+      value: data.AutoCompleteFacetingString,
+      facet: x.Key
+    };
+  });
+
+  (_ret = ret).unshift.apply(_ret, _toConsumableArray(facets));
+
+  return ret;
+}), _defineProperty(_demo, 'getSearchRequest', function getSearchRequest(options) {
+  var req = {
+    QuestName: config.searchQuest,
+    QueryString: options.query,
+    RelatedQueries_FromIndex: 0,
+    RelatedQueries_ToIndex: 5,
+    PreventReSearch: options.preventReSearch || false
+  };
+
+  if (config.directResultsPageSize > 0) {
+    req.DirectResults_FromIndex = config.directResultsPageSize * options.page;
+    req.DirectResults_ToIndex = (options.page + 1) * config.directResultsPageSize - 1;
+  }
+
+  if (config.recommendedResultsPageSize > 0) {
+    req.RecommendedResults_FromIndex = config.recommendedResultsPageSize * options.page;
+    req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
+  }
+
+  for (var i = 0; i < config.filters.length; i++) {
+    if (this.filters[config.filters[i].RequestParameter]) {
+      req[config.filters[i].RequestParameter] = this.filters[config.filters[i].RequestParameter];
+    }
+  }
+
+  return req;
+}), _defineProperty(_demo, 'search', function search() {
+  var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+
+
+  var req = {},
+      self = this,
+      isContinuation;
+
+  if (options.clearFilters || options.facet) {
+    this.clearFilters();
+  }
+
+  if (options.facet) {
+    this.addFilter(config.autoCompleteFacetingParameter, options.facet);
+  }
+
+  if (options.clearSearch) {
+    render.clearSearch();
+  }
+
+  options = {
+    instant: options.instant || false,
+    preventReSearch: options.preventReSearch || false,
+    page: options.page || 0,
+    query: options.query
+  };
+
+  this.previousSearch = _extends({}, options);
+
+  isContinuation = options.page > 0 && config.continousScrolling;
+
+  if (!isContinuation) {
+    render.hidePopup();
+
+    if (!options.instant) {
+      render.hideAutocomplete();
+    }
+  }
+
+  req = this.getSearchRequest(options);
+
+  // utils.setHash({
+  //   config: config.Name,
+  //   page: req.search,
+  //   query: query
+  // });
+
+  $(guiConfig.inputSearch).val(options.query);
+
+  _loop54JsLib2.default.getResponse(req).then(function (response) {
+
+    if (!response.success && config.DevMode) {
+      alert(response.errorMessage);
+    }
+
+    var data = response.data;
+
+    self.previousSearch.totalItems = data.DirectResults_TotalItems;
+
+    render.clearSearch(isContinuation);
+
+    if (!data.MakesSense) {
+      render.showMakesNoSense(data.DirectResults, data.SpellingSuggestions, options.query, self.search.bind(self));
+    }
+
+    if (data.ReSearchQueryString) {
+      render.showReSearch(data.ReSearchQueryString, options.query, self.search.bind(self));
+    }
+
+    if (data.RelatedQueries && data.RelatedQueries.length > 0) {
+      render.addRelated(data.RelatedQueries, self.search.bind(self));
+    }
+
+    if (data.DirectResults && data.DirectResults.length > 0) {
+      render.directResults(data.DirectResults, data.DirectResults_TotalItems, isContinuation, self.createEvent);
+    }
+
+    if (data.RecommendedResults && data.RecommendedResults.length > 0) {
+      render.recommendedResults(data.RecommendedResults, isContinuation, self.createEvent);
+    } else if (options.page < 1) {
+      render.noRecommendedResults();
+    }
+
+    self.updateFilters(data);
+
+    if (config.continousScrolling) {
+      self.displayMore();
+    } else if (data.DirectResults_TotalItems > config.directResultsPageSize) {
+      self.updatePaging(data.DirectResults_TotalItems, options.page, self.previousSearch, self.search.bind(self));
+    }
+  });
+  // .catch( function (err) {
+  //         console.log('Error when processing response:')
+  //         console.log(err);
+  //       });
+}), _defineProperty(_demo, 'updatePaging', function updatePaging(totalItems, page, prevSearch, searchCallback) {
+
+  function showPage(p) {
+    if (p < 2) return 'show';
+
+    if (p > pages - 3) return 'show';
+
+    if (p > page - 2 && p < page + 2) return 'show';
+
+    if (p == 2) return 'dots';
+
+    if (p == pages - 3 && page != 0 && page != pages - 1) return 'dots';
+
+    return 'hide';
+  }
+
+  var pages = Math.ceil(totalItems / config.directResultsPageSize);
+
+  var pagesDiv = $('<div/>').addClass('pages').appendTo($('div#directresults'));
+
+  var i = 0;
+  for (i; i < pages; i++) {
+
+    var show = showPage(i);
+
+    if (show == 'show') {
+
+      $('<a/>').html(i + 1).data('page', i).addClass(page == i ? 'selected' : '').click(function () {
+
+        searchCallback(_extends({}, prevSearch, {
+          page: $(this).data('page')
+        }));
+      }).appendTo(pagesDiv);
+    } else if (show == 'dots') {
+      $('<span>...</span>').appendTo(pagesDiv);
+    }
+  }
+}), _defineProperty(_demo, 'displayMore', function displayMore() {
+  //there are more results available
+
+  var ps = this.previousSearch;
+
+  if (this.isBottomVisible()) {
+
+    if (ps.totalItems > (ps.page + 1) * config.directResultsPageSize) {
+      this.search({
+        query: ps.query,
+        instant: false,
+        preventReSearch: ps.preventReSearch,
+        page: ps.page + 1
+      });
+    } else if (ps.totalItems > config.directResultsPageSize && $(guiConfig.directResults).find('div.endofresults').length === 0) {
+      $(guiConfig.directResults).append($('<div/>').addClass('endofresults').html('No more results'));
+    }
+  }
+}), _defineProperty(_demo, 'updateFilters', function updateFilters(res) {
+
+  var self = this;
+
+  for (var i = 0; i < config.filters.length; i++) {
+
+    $('div#filter_' + config.filters[i].Name).empty();
+
+    var data = res[config.filters[i].ResponseParameter];
+
+    if (data && data.length > 0) {
+
+      var filterArray = this.filters[config.filters[i].RequestParameter];
+
+      if (!filterArray) {
+        filterArray = [];
+      }
+
+      var filterDiv = $('div#filter_' + config.filters[i].Name);
+      var div = $('<div/>').addClass('alwaysvisible').appendTo(filterDiv);
+
+      for (var j = 0; j < data.length; j++) {
+
+        if (j == 5) {
+
+          div = $('<div/>').addClass('hideable').appendTo(filterDiv);
+
+          if (this.visibleFilterDivs[config.filters[i].Name]) {
+            div.show();
+          }
+
+          $('<a/>').html(self.visibleFilterDivs[config.filters[i].Name] ? 'Hide' : 'Show all').addClass('showhide').data('div', div).data('filterName', config.filters[i].Name).click(function () {
+
+            if ($(this).data('div').is(':visible')) {
+
+              self.visibleFilterDivs[$(this).data('filterName')] = false;
+
+              $(this).data('div').hide();
+              $(this).html('Show all');
+            } else {
+
+              self.visibleFilterDivs[$(this).data('filterName')] = true;
+
+              $(this).data('div').show();
+              $(this).html('Hide');
+            }
+          }).appendTo(filterDiv);
+        }
+
+        div.append($('<a/>').html(data[j].Key + ' (' + data[j].Value + ')').data('filterkey', config.filters[i].RequestParameter).data('filtervalue', data[j].Key).click(function () {
+          if (!$(this).hasClass('selected')) {
+            self.addFilter($(this).data('filterkey'), $(this).data('filtervalue'));
+            $(this).addClass('selected');
+            self.searchAgain();
+          } else {
+            self.removeFilter($(this).data('filterkey'), $(this).data('filtervalue'));
+            $(this).removeClass('selected');
+            self.searchAgain();
+          }
+        }).addClass(filterArray.indexOf(data[j].Key) > -1 ? 'selected' : ''));
+      }
+    }
+  }
+}), _defineProperty(_demo, 'isBottomVisible', function isBottomVisible() {
+  var scroll = $(window).scrollTop();
+  var windowHeight = $(window).height();
+
+  var height = $(guiConfig.directResults).outerHeight() + $(guiConfig.directResults).offset().top;
+
+  return scroll + windowHeight >= height;
+}), _defineProperty(_demo, 'clearFilters', function clearFilters() {
+  this.filters = {};
+}), _defineProperty(_demo, 'searchAgain', function searchAgain() {
+  this.search(_extends({}, this.previousSearch, { clearSearch: true, page: 0 }));
+}), _defineProperty(_demo, 'addFilter', function addFilter(key, value) {
+
+  if (!this.filters[key]) {
+    this.filters[key] = [];
+  }
+
+  this.filters[key].push(value);
+}), _defineProperty(_demo, 'removeFilter', function removeFilter(key, value) {
+
+  var param = this.filters[key];
+
+  if (!param) {
+    return;
+  }
+
+  var index = param.indexOf(value);
+
+  if (index > -1) {
+    param.splice(index, 1);
+  }
+}), _demo);
 
 },{"./render.js":19,"./utils.js":20,"loop54-js-lib":4}],19:[function(require,module,exports){
 (function (global){
