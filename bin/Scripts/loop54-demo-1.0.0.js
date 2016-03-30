@@ -1237,7 +1237,7 @@ var config = {
   autoCompleteFacetingParameter: 'Faceting.Categories',
   productTitleAttribute: 'productName',
   productDescriptionAttribute: 'Description',
-  productImageUrlAttributes: ['imageURL'],
+  productImageUrlAttributes: ['ImageUrl'],
   productImageUrl: '$1',
   use26Request: true,
   showValues: true
@@ -1409,10 +1409,6 @@ var demo = (_demo = {
       value: x.Key,
       label: x.Key
     };
-  });
-
-  ret = ret.filter(function (x) {
-    return x.value !== data.AutoCompleteFacetingString;
   });
 
   facets = data.AutoCompleteFacets.map(function (x) {

@@ -54,7 +54,7 @@ var config = {
   autoCompleteFacetingParameter: 'Faceting.Categories',
   productTitleAttribute: 'productName',
   productDescriptionAttribute: 'Description',
-  productImageUrlAttributes: ['imageURL'],
+  productImageUrlAttributes: ['ImageUrl'],
   productImageUrl: '$1',
   use26Request: true,
   showValues: true
@@ -240,8 +240,6 @@ var demo = {
         label: x.Key
       };
     }); 
-
-    ret = ret.filter( x => (x.value !== data.AutoCompleteFacetingString) );
 
     facets = data.AutoCompleteFacets.map( x => { 
       return {

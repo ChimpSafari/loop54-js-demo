@@ -1,6 +1,6 @@
 {
   "name": "loop54-js-demo",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "description": "Frontend demo of Loop54 functionallity using JS-lib. Using jQuery.",
   "main": "src/index.js",
   "scripts": {
