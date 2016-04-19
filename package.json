@@ -27,6 +27,7 @@
     "babelify": "^7.2.0",
     "browserify": "^12.0.1",
     "chai": "^3.4.1",
+    "es6-promise": "^3.1.2",
     "express": "^4.13.3",
     "loop54-js-lib": "0.1.6"
   }

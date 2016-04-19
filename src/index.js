@@ -4,7 +4,7 @@
 
 // ES6 or using requre.js: import/require lib and use
 import lib from 'loop54-js-lib';
-
+var Promise = require('es6-promise').Promise;
 
 import renderFunc from './render.js';
 
@@ -65,12 +65,12 @@ lib.setConfig({url: config.url});
 
 // init eventhandlers
 $(document).ready(function () {
-  
+
 
   $(guiConfig.buttonNewUser).click(function() {
     lib.getRandomUserId();
   });
-  
+
   function doSearch(event) {
     if (event.keyCode === 13 || event.type === "click") {
       demo.search({
@@ -134,7 +134,7 @@ $(document).ready(function () {
     $(window).bind('scroll', function() {
       demo.displayMore();
     });
-  } 
+  }
 });
 
 
@@ -152,14 +152,13 @@ var demo = {
   visibleFilterDivs: {},
   previousSearch: {},
 
-
   createEvent: function(entity, eventType) {
 
     var req = {
       Events: [{
         Type: eventType,
         Entity: {
-          EntityType: entity.EntityType, 
+          EntityType: entity.EntityType,
           ExternalId: entity.ExternalId,
         }
       }],
@@ -197,7 +196,7 @@ var demo = {
 
     var req,
       self = this,
-      cache = this.autocompleteCache; 
+      cache = this.autocompleteCache;
 
     function processResponse (response) {
 
@@ -232,19 +231,19 @@ var demo = {
 
   formatAutoCompleteData: function (data) {
 
-    var ret, facets; 
+    var ret, facets;
 
     ret = data.AutoComplete.map( (x) => {
-      return { 
-        value: x.Key, 
+      return {
+        value: x.Key,
         label: x.Key
       };
-    }); 
+    });
 
-    facets = data.AutoCompleteFacets.map( x => { 
+    facets = data.AutoCompleteFacets.map( x => {
       return {
         label: data.AutoCompleteFacetingString,
-        value: data.AutoCompleteFacetingString, 
+        value: data.AutoCompleteFacetingString,
         facet: x.Key
       };
     });
@@ -299,7 +298,7 @@ var demo = {
 
     if (options.clearSearch) {
       render.clearSearch();
-    }    
+    }
 
     options = {
       instant: options.instant || false,
@@ -394,7 +393,7 @@ var demo = {
 
       if (p == 2)
           return 'dots';
-      
+
       if (p == pages - 3 && page != 0 && page != pages-1)
           return 'dots';
 
@@ -429,16 +428,16 @@ var demo = {
 
   displayMore: function() {
     //there are more results available
-    
+
     var ps = this.previousSearch;
 
     if (this.isBottomVisible()) {
 
       if (ps.totalItems > (ps.page + 1) * config.directResultsPageSize) {
         this.search({
-          query: ps.query, 
-          instant: false, 
-          preventReSearch: ps.preventReSearch, 
+          query: ps.query,
+          instant: false,
+          preventReSearch: ps.preventReSearch,
           page: ps.page + 1
         });
       }
@@ -470,7 +469,7 @@ var demo = {
         var div = $('<div/>').addClass('alwaysvisible').appendTo(filterDiv);
 
         for (var j = 0; j < data.length; j++) {
-          
+
           if (j == 5) {
 
             div = $('<div/>').addClass('hideable').appendTo(filterDiv);
@@ -541,7 +540,7 @@ var demo = {
     return (scroll + windowHeight) >= height;
   },
 
-  
+
 
   // hashChanged: function(previousHash, currentHash) {
 
