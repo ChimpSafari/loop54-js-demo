@@ -2173,7 +2173,7 @@ var guiConfig = {
 var config = {
   id: '18eb1533-a1f7-4ec8-9211-a561dcf43597',
   name: 'Hello World',
-  url: '  http://212.181.47.236:7001',
+  url: 'http://helloworld.54proxy.se/',
   autoCompleteQuest: 'AutoComplete',
   searchQuest: 'Search',
   similarProductsQuest: 'SimilarProducts',
