@@ -37,11 +37,11 @@ var config = {
 	createEventsQuest: 'CreateEvents',
 	filters: [{
 	 'Name': 'Kategorier',
-	 'RequestParameter': 'Faceting.Categories',
+	 'RequestParameter': 'Faceting.Category',
 	 'ResponseParameter': 'Category'
 	}, {
 	 'Name': 'Märken',
-	 'RequestParameter': 'Faceting.Brands',
+	 'RequestParameter': 'Faceting.Manufacturer',
 	 'ResponseParameter': 'Manufacturer'
 	}],
 	autoCompletePageSize: 8,
