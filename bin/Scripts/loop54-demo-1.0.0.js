@@ -2154,53 +2154,53 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 var Promise = require('es6-promise').Promise;
 
 var guiConfig = {
-  inputSearch: 'input#search',
-  buttonSearch: 'a#search-button',
-  buttonNewUser: 'a#new-user-button',
-  inputSearchText: 'Input query here..',
-  filters: 'div#filters',
-  recommendedResults: 'div#recommendedresults',
-  directResults: 'div#directresults',
-  breadCrumbsContainer: '#breadcrumbs-wrapper',
-  queryInBreadCrumb: '#breadcrumbs-wrapper div.breadcrumbs div.block.search.current strong span',
-  makesSense: 'div#nosense',
-  makesSenseHeader: 'div#nosenseheader',
-  spellingSuggestions: 'div#spellingsuggestions',
-  reSearch: 'div#research',
-  related: 'div#related'
+	inputSearch: 'input#search',
+	buttonSearch: 'a#search-button',
+	buttonNewUser: 'a#new-user-button',
+	inputSearchText: 'Input query here..',
+	filters: 'div#filters',
+	recommendedResults: 'div#recommendedresults',
+	directResults: 'div#directresults',
+	breadCrumbsContainer: '#breadcrumbs-wrapper',
+	queryInBreadCrumb: '#breadcrumbs-wrapper div.breadcrumbs div.block.search.current strong span',
+	makesSense: 'div#nosense',
+	makesSenseHeader: 'div#nosenseheader',
+	spellingSuggestions: 'div#spellingsuggestions',
+	reSearch: 'div#research',
+	related: 'div#related'
 };
 
 var config = {
-  id: '18eb1533-a1f7-4ec8-9211-a561dcf43597',
-  name: 'Hello World',
-  url: 'http://helloworld.54proxy.se/',
-  autoCompleteQuest: 'AutoComplete',
-  searchQuest: 'Search',
-  similarProductsQuest: 'SimilarProducts',
-  createEventsQuest: 'CreateEvents',
-  filters: [{
-    'Name': 'Kategorier',
-    'RequestParameter': 'Faceting.Categories',
-    'ResponseParameter': 'Categories'
-  }, {
-    'Name': 'Märken',
-    'RequestParameter': 'Faceting.Brands',
-    'ResponseParameter': 'Brands'
-  }],
-  autoCompletePageSize: 8,
-  directResultsPageSize: 24,
-  recommendedResultsPageSize: 12,
-  continousScrolling: false,
-  instantSearch: false,
-  devMode: true,
-  cacheAutoComplete: false,
-  autoCompleteFacetingParameter: 'Faceting.Categories',
-  productTitleAttribute: 'Title',
-  productDescriptionAttribute: 'Description',
-  productImageUrlAttributes: ['ImageUrl'],
-  productImageUrl: '$1',
-  use26Request: true,
-  showValues: true
+	id: '18eb1533-a1f7-4ec8-9211-a561dcf43597',
+	name: 'Hello World',
+	url: 'http://helloworld.54proxy.se/',
+	autoCompleteQuest: 'AutoComplete',
+	searchQuest: 'Search',
+	similarProductsQuest: 'SimilarProducts',
+	createEventsQuest: 'CreateEvents',
+	filters: [{
+		'Name': 'Kategorier',
+		'RequestParameter': 'Faceting.Categories',
+		'ResponseParameter': 'Category'
+	}, {
+		'Name': 'Märken',
+		'RequestParameter': 'Faceting.Brands',
+		'ResponseParameter': 'Manufacturer'
+	}],
+	autoCompletePageSize: 8,
+	directResultsPageSize: 24,
+	recommendedResultsPageSize: 12,
+	continousScrolling: false,
+	instantSearch: false,
+	devMode: true,
+	cacheAutoComplete: false,
+	autoCompleteFacetingParameter: 'Faceting.Categories',
+	productTitleAttribute: 'Title',
+	productDescriptionAttribute: 'Description',
+	productImageUrlAttributes: ['ImageUrl'],
+	productImageUrl: '$1',
+	use26Request: true,
+	showValues: true
 };
 
 var render = (0, _render2.default)(config, guiConfig);
@@ -2209,449 +2209,449 @@ _loop54JsLib2.default.setConfig({ url: config.url });
 // init eventhandlers
 $(document).ready(function () {
 
-  $(guiConfig.buttonNewUser).click(function () {
-    _loop54JsLib2.default.getRandomUserId();
-  });
+	$(guiConfig.buttonNewUser).click(function () {
+		_loop54JsLib2.default.getRandomUserId();
+	});
 
-  function doSearch(event) {
-    if (event.keyCode === 13 || event.type === "click") {
-      demo.search({
-        query: $(guiConfig.inputSearch).val(),
-        clearFilters: true,
-        clearSearch: true,
-        preventReSearch: false,
-        instant: false,
-        page: 0
-      });
-      $(guiConfig.inputSearch).autocomplete('close');
-    }
-  }
+	function doSearch(event) {
+		if (event.keyCode === 13 || event.type === "click") {
+			demo.search({
+				query: $(guiConfig.inputSearch).val(),
+				clearFilters: true,
+				clearSearch: true,
+				preventReSearch: false,
+				instant: false,
+				page: 0
+			});
+			$(guiConfig.inputSearch).autocomplete('close');
+		}
+	}
 
-  render.initFacetting();
+	render.initFacetting();
 
-  $(guiConfig.inputSearch).autocomplete({
-    source: function source(req, res) {
-      demo.autocomplete(req, res);
-    },
-    minLength: 2,
-    select: function select(event, ui) {
-      event.preventDefault();
-      event.stopPropagation();
-      $(guiConfig.inputSearch).unbind('keyup', doSearch);
-      demo.search({
-        clearFilters: true,
-        instant: false,
-        clearSearch: true,
-        query: ui.item.value,
-        facet: ui.item.facet
-      });
-    },
-    response: function response(event, ui) {
-      $(guiConfig.inputSearch).bind('keyup', doSearch);
-    },
-    open: function open() {
-      $(this).removeClass('ui-corner-all').addClass('ui-corner-top');
-    },
-    close: function close() {
-      $(this).removeClass('ui-corner-top').addClass('ui-corner-all');
-    }
-  }).autocomplete('instance')._renderItem = function (ul, item) {
-    var label = item.value;
+	$(guiConfig.inputSearch).autocomplete({
+		source: function source(req, res) {
+			demo.autocomplete(req, res);
+		},
+		minLength: 2,
+		select: function select(event, ui) {
+			event.preventDefault();
+			event.stopPropagation();
+			$(guiConfig.inputSearch).unbind('keyup', doSearch);
+			demo.search({
+				clearFilters: true,
+				instant: false,
+				clearSearch: true,
+				query: ui.item.value,
+				facet: ui.item.facet
+			});
+		},
+		response: function response(event, ui) {
+			$(guiConfig.inputSearch).bind('keyup', doSearch);
+		},
+		open: function open() {
+			$(this).removeClass('ui-corner-all').addClass('ui-corner-top');
+		},
+		close: function close() {
+			$(this).removeClass('ui-corner-top').addClass('ui-corner-all');
+		}
+	}).autocomplete('instance')._renderItem = function (ul, item) {
+		var label = item.value;
 
-    if (item.facet) {
-      label = item.value + ' in ' + '<span class="facet">' + item.facet + '</span>';
-    }
+		if (item.facet) {
+			label = item.value + ' in ' + '<span class="facet">' + item.facet + '</span>';
+		}
 
-    return $('<li>').append('<a>' + label + '</a>').appendTo(ul);
-  };
+		return $('<li>').append('<a>' + label + '</a>').appendTo(ul);
+	};
 
-  $(guiConfig.buttonSearch).click(doSearch);
-  $(guiConfig.inputSearch).bind('keyup', doSearch);
-  $(guiConfig.inputSearch).focus();
+	$(guiConfig.buttonSearch).click(doSearch);
+	$(guiConfig.inputSearch).bind('keyup', doSearch);
+	$(guiConfig.inputSearch).focus();
 
-  if (config.continousScrolling) {
-    $(window).bind('scroll', function () {
-      demo.displayMore();
-    });
-  }
+	if (config.continousScrolling) {
+		$(window).bind('scroll', function () {
+			demo.displayMore();
+		});
+	}
 });
 
 var utils = require('./utils.js');
 
 var demo = (_demo = {
-  autoCompleteQueries: [],
-  fetchingAutoComplete: false,
-  instantTimer: null,
-  runningACRequests: 0,
+	autoCompleteQueries: [],
+	fetchingAutoComplete: false,
+	instantTimer: null,
+	runningACRequests: 0,
 
-  activeIndex: -1,
-  filters: {},
-  autocompleteCache: {},
-  visibleFilterDivs: {},
-  previousSearch: {},
+	activeIndex: -1,
+	filters: {},
+	autocompleteCache: {},
+	visibleFilterDivs: {},
+	previousSearch: {},
 
-  createEvent: function createEvent(entity, eventType) {
+	createEvent: function createEvent(entity, eventType) {
 
-    var req = {
-      Events: [{
-        Type: eventType,
-        Entity: {
-          EntityType: entity.EntityType,
-          ExternalId: entity.ExternalId
-        }
-      }],
-      QuestName: config.createEventsQuest
-    };
+		var req = {
+			Events: [{
+				Type: eventType,
+				Entity: {
+					EntityType: entity.EntityType,
+					ExternalId: entity.ExternalId
+				}
+			}],
+			QuestName: config.createEventsQuest
+		};
 
-    _loop54JsLib2.default.getResponse(req, function (response) {
+		_loop54JsLib2.default.getResponse(req, function (response) {
 
-      if (!response.success && config.devMode) {
-        console.log(response.errorMessage);
-      }
-    });
-  },
+			if (!response.success && config.devMode) {
+				console.log(response.errorMessage);
+			}
+		});
+	},
 
-  getAutoCompeteRequest: function getAutoCompeteRequest(options) {
+	getAutoCompeteRequest: function getAutoCompeteRequest(options) {
 
-    var req = {
-      QuestName: config.autoCompleteQuest,
-      QueryString: options.query
-    };
+		var req = {
+			QuestName: config.autoCompleteQuest,
+			QueryString: options.query
+		};
 
-    if (config.autoCompletePageSize > 0) {
-      req.AutoComplete_FromIndex = 0;
-      req.AutoComplete_ToIndex = config.autoCompletePageSize;
-    }
+		if (config.autoCompletePageSize > 0) {
+			req.AutoComplete_FromIndex = 0;
+			req.AutoComplete_ToIndex = config.autoCompletePageSize;
+		}
 
-    return req;
-  }
+		return req;
+	}
 
 }, _defineProperty(_demo, 'previousSearch', {}), _defineProperty(_demo, 'autocomplete', function autocomplete(req, res) {
 
-  var req,
-      self = this,
-      cache = this.autocompleteCache;
+	var req,
+	    self = this,
+	    cache = this.autocompleteCache;
 
-  function processResponse(response) {
+	function processResponse(response) {
 
-    if (!response.success && config.DevMode) {
-      alert(response.errorMessage);
-    }
+		if (!response.success && config.DevMode) {
+			alert(response.errorMessage);
+		}
 
-    var data = response.data;
+		var data = response.data;
 
-    if (data.AutoComplete.length > 0) {
-      res(self.formatAutoCompleteData(data));
-    } else {
-      res([]);
-    }
-  }
+		if (data.AutoComplete.length > 0) {
+			res(self.formatAutoCompleteData(data));
+		} else {
+			res([]);
+		}
+	}
 
-  if (cache[req.term]) {
-    processResponse(cache[req.term]);
-  }
+	if (cache[req.term]) {
+		processResponse(cache[req.term]);
+	}
 
-  req = this.getAutoCompeteRequest({ query: req.term });
+	req = this.getAutoCompeteRequest({ query: req.term });
 
-  _loop54JsLib2.default.getResponse(req).then(function (response) {
+	_loop54JsLib2.default.getResponse(req).then(function (response) {
 
-    cache[req.term] = response;
+		cache[req.term] = response;
 
-    processResponse(response);
-  });
+		processResponse(response);
+	});
 }), _defineProperty(_demo, 'formatAutoCompleteData', function formatAutoCompleteData(data) {
-  var _ret;
+	var _ret;
 
-  var ret, facets;
+	var ret, facets;
 
-  ret = data.AutoComplete.map(function (x) {
-    return {
-      value: x.Key,
-      label: x.Key
-    };
-  });
+	ret = data.AutoComplete.map(function (x) {
+		return {
+			value: x.Key,
+			label: x.Key
+		};
+	});
 
-  facets = data.AutoCompleteFacets.map(function (x) {
-    return {
-      label: data.AutoCompleteFacetingString,
-      value: data.AutoCompleteFacetingString,
-      facet: x.Key
-    };
-  });
+	facets = data.AutoCompleteFacets.map(function (x) {
+		return {
+			label: data.AutoCompleteFacetingString,
+			value: data.AutoCompleteFacetingString,
+			facet: x.Key
+		};
+	});
 
-  (_ret = ret).unshift.apply(_ret, _toConsumableArray(facets));
+	(_ret = ret).unshift.apply(_ret, _toConsumableArray(facets));
 
-  return ret;
+	return ret;
 }), _defineProperty(_demo, 'getSearchRequest', function getSearchRequest(options) {
-  var req = {
-    QuestName: config.searchQuest,
-    QueryString: options.query,
-    RelatedQueries_FromIndex: 0,
-    RelatedQueries_ToIndex: 5,
-    PreventReSearch: options.preventReSearch || false
-  };
+	var req = {
+		QuestName: config.searchQuest,
+		QueryString: options.query,
+		RelatedQueries_FromIndex: 0,
+		RelatedQueries_ToIndex: 5,
+		PreventReSearch: options.preventReSearch || false
+	};
 
-  if (config.directResultsPageSize > 0) {
-    req.DirectResults_FromIndex = config.directResultsPageSize * options.page;
-    req.DirectResults_ToIndex = (options.page + 1) * config.directResultsPageSize - 1;
-  }
+	if (config.directResultsPageSize > 0) {
+		req.DirectResults_FromIndex = config.directResultsPageSize * options.page;
+		req.DirectResults_ToIndex = (options.page + 1) * config.directResultsPageSize - 1;
+	}
 
-  if (config.recommendedResultsPageSize > 0) {
-    req.RecommendedResults_FromIndex = config.recommendedResultsPageSize * options.page;
-    req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
-  }
+	if (config.recommendedResultsPageSize > 0) {
+		req.RecommendedResults_FromIndex = config.recommendedResultsPageSize * options.page;
+		req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
+	}
 
-  for (var i = 0; i < config.filters.length; i++) {
-    if (this.filters[config.filters[i].RequestParameter]) {
-      req[config.filters[i].RequestParameter] = this.filters[config.filters[i].RequestParameter];
-    }
-  }
+	for (var i = 0; i < config.filters.length; i++) {
+		if (this.filters[config.filters[i].RequestParameter]) {
+			req[config.filters[i].RequestParameter] = this.filters[config.filters[i].RequestParameter];
+		}
+	}
 
-  return req;
+	return req;
 }), _defineProperty(_demo, 'search', function search() {
-  var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+	var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
 
-  var req = {},
-      self = this,
-      isContinuation;
+	var req = {},
+	    self = this,
+	    isContinuation;
 
-  if (options.clearFilters || options.facet) {
-    this.clearFilters();
-  }
+	if (options.clearFilters || options.facet) {
+		this.clearFilters();
+	}
 
-  if (options.facet) {
-    this.addFilter(config.autoCompleteFacetingParameter, options.facet);
-  }
+	if (options.facet) {
+		this.addFilter(config.autoCompleteFacetingParameter, options.facet);
+	}
 
-  if (options.clearSearch) {
-    render.clearSearch();
-  }
+	if (options.clearSearch) {
+		render.clearSearch();
+	}
 
-  options = {
-    instant: options.instant || false,
-    preventReSearch: options.preventReSearch || false,
-    page: options.page || 0,
-    query: options.query
-  };
+	options = {
+		instant: options.instant || false,
+		preventReSearch: options.preventReSearch || false,
+		page: options.page || 0,
+		query: options.query
+	};
 
-  this.previousSearch = _extends({}, options);
+	this.previousSearch = _extends({}, options);
 
-  isContinuation = options.page > 0 && config.continousScrolling;
+	isContinuation = options.page > 0 && config.continousScrolling;
 
-  if (!isContinuation) {
-    render.hidePopup();
+	if (!isContinuation) {
+		render.hidePopup();
 
-    if (!options.instant) {
-      render.hideAutocomplete();
-    }
-  }
+		if (!options.instant) {
+			render.hideAutocomplete();
+		}
+	}
 
-  req = this.getSearchRequest(options);
+	req = this.getSearchRequest(options);
 
-  // utils.setHash({
-  //   config: config.Name,
-  //   page: req.search,
-  //   query: query
-  // });
+	// utils.setHash({
+	//   config: config.Name,
+	//   page: req.search,
+	//   query: query
+	// });
 
-  $(guiConfig.inputSearch).val(options.query);
+	$(guiConfig.inputSearch).val(options.query);
 
-  _loop54JsLib2.default.getResponse(req).then(function (response) {
+	_loop54JsLib2.default.getResponse(req).then(function (response) {
 
-    if (!response.success && config.DevMode) {
-      alert(response.errorMessage);
-    }
+		if (!response.success && config.DevMode) {
+			alert(response.errorMessage);
+		}
 
-    var data = response.data;
+		var data = response.data;
 
-    self.previousSearch.totalItems = data.DirectResults_TotalItems;
+		self.previousSearch.totalItems = data.DirectResults_TotalItems;
 
-    render.clearSearch(isContinuation);
+		render.clearSearch(isContinuation);
 
-    if (!data.MakesSense) {
-      render.showMakesNoSense(data.DirectResults, data.SpellingSuggestions, options.query, self.search.bind(self));
-    }
+		if (!data.MakesSense) {
+			render.showMakesNoSense(data.DirectResults, data.SpellingSuggestions, options.query, self.search.bind(self));
+		}
 
-    if (data.ReSearchQueryString) {
-      render.showReSearch(data.ReSearchQueryString, options.query, self.search.bind(self));
-    }
+		if (data.ReSearchQueryString) {
+			render.showReSearch(data.ReSearchQueryString, options.query, self.search.bind(self));
+		}
 
-    if (data.RelatedQueries && data.RelatedQueries.length > 0) {
-      render.addRelated(data.RelatedQueries, self.search.bind(self));
-    }
+		if (data.RelatedQueries && data.RelatedQueries.length > 0) {
+			render.addRelated(data.RelatedQueries, self.search.bind(self));
+		}
 
-    if (data.DirectResults && data.DirectResults.length > 0) {
-      render.directResults(data.DirectResults, data.DirectResults_TotalItems, isContinuation, self.createEvent);
-    }
+		if (data.DirectResults && data.DirectResults.length > 0) {
+			render.directResults(data.DirectResults, data.DirectResults_TotalItems, isContinuation, self.createEvent);
+		}
 
-    if (data.RecommendedResults && data.RecommendedResults.length > 0) {
-      render.recommendedResults(data.RecommendedResults, isContinuation, self.createEvent);
-    } else if (options.page < 1) {
-      render.noRecommendedResults();
-    }
+		if (data.RecommendedResults && data.RecommendedResults.length > 0) {
+			render.recommendedResults(data.RecommendedResults, isContinuation, self.createEvent);
+		} else if (options.page < 1) {
+			render.noRecommendedResults();
+		}
 
-    self.updateFilters(data);
+		self.updateFilters(data);
 
-    if (config.continousScrolling) {
-      self.displayMore();
-    } else if (data.DirectResults_TotalItems > config.directResultsPageSize) {
-      self.updatePaging(data.DirectResults_TotalItems, options.page, self.previousSearch, self.search.bind(self));
-    }
-  });
-  // .catch( function (err) {
-  //         console.log('Error when processing response:')
-  //         console.log(err);
-  //       });
+		if (config.continousScrolling) {
+			self.displayMore();
+		} else if (data.DirectResults_TotalItems > config.directResultsPageSize) {
+			self.updatePaging(data.DirectResults_TotalItems, options.page, self.previousSearch, self.search.bind(self));
+		}
+	});
+	// .catch( function (err) {
+	//         console.log('Error when processing response:')
+	//         console.log(err);
+	//       });
 }), _defineProperty(_demo, 'updatePaging', function updatePaging(totalItems, page, prevSearch, searchCallback) {
 
-  function showPage(p) {
-    if (p < 2) return 'show';
+	function showPage(p) {
+		if (p < 2) return 'show';
 
-    if (p > pages - 3) return 'show';
+		if (p > pages - 3) return 'show';
 
-    if (p > page - 2 && p < page + 2) return 'show';
+		if (p > page - 2 && p < page + 2) return 'show';
 
-    if (p == 2) return 'dots';
+		if (p == 2) return 'dots';
 
-    if (p == pages - 3 && page != 0 && page != pages - 1) return 'dots';
+		if (p == pages - 3 && page != 0 && page != pages - 1) return 'dots';
 
-    return 'hide';
-  }
+		return 'hide';
+	}
 
-  var pages = Math.ceil(totalItems / config.directResultsPageSize);
+	var pages = Math.ceil(totalItems / config.directResultsPageSize);
 
-  var pagesDiv = $('<div/>').addClass('pages').appendTo($('div#directresults'));
+	var pagesDiv = $('<div/>').addClass('pages').appendTo($('div#directresults'));
 
-  var i = 0;
-  for (i; i < pages; i++) {
+	var i = 0;
+	for (i; i < pages; i++) {
 
-    var show = showPage(i);
+		var show = showPage(i);
 
-    if (show == 'show') {
+		if (show == 'show') {
 
-      $('<a/>').html(i + 1).data('page', i).addClass(page == i ? 'selected' : '').click(function () {
+			$('<a/>').html(i + 1).data('page', i).addClass(page == i ? 'selected' : '').click(function () {
 
-        searchCallback(_extends({}, prevSearch, {
-          page: $(this).data('page')
-        }));
-      }).appendTo(pagesDiv);
-    } else if (show == 'dots') {
-      $('<span>...</span>').appendTo(pagesDiv);
-    }
-  }
+				searchCallback(_extends({}, prevSearch, {
+					page: $(this).data('page')
+				}));
+			}).appendTo(pagesDiv);
+		} else if (show == 'dots') {
+			$('<span>...</span>').appendTo(pagesDiv);
+		}
+	}
 }), _defineProperty(_demo, 'displayMore', function displayMore() {
-  //there are more results available
+	//there are more results available
 
-  var ps = this.previousSearch;
+	var ps = this.previousSearch;
 
-  if (this.isBottomVisible()) {
+	if (this.isBottomVisible()) {
 
-    if (ps.totalItems > (ps.page + 1) * config.directResultsPageSize) {
-      this.search({
-        query: ps.query,
-        instant: false,
-        preventReSearch: ps.preventReSearch,
-        page: ps.page + 1
-      });
-    } else if (ps.totalItems > config.directResultsPageSize && $(guiConfig.directResults).find('div.endofresults').length === 0) {
-      $(guiConfig.directResults).append($('<div/>').addClass('endofresults').html('No more results'));
-    }
-  }
+		if (ps.totalItems > (ps.page + 1) * config.directResultsPageSize) {
+			this.search({
+				query: ps.query,
+				instant: false,
+				preventReSearch: ps.preventReSearch,
+				page: ps.page + 1
+			});
+		} else if (ps.totalItems > config.directResultsPageSize && $(guiConfig.directResults).find('div.endofresults').length === 0) {
+			$(guiConfig.directResults).append($('<div/>').addClass('endofresults').html('No more results'));
+		}
+	}
 }), _defineProperty(_demo, 'updateFilters', function updateFilters(res) {
 
-  var self = this;
+	var self = this;
 
-  for (var i = 0; i < config.filters.length; i++) {
+	for (var i = 0; i < config.filters.length; i++) {
 
-    $('div#filter_' + config.filters[i].Name).empty();
+		$('div#filter_' + config.filters[i].Name).empty();
 
-    var data = res[config.filters[i].ResponseParameter];
+		var data = res[config.filters[i].ResponseParameter];
 
-    if (data && data.length > 0) {
+		if (data && data.length > 0) {
 
-      var filterArray = this.filters[config.filters[i].RequestParameter];
+			var filterArray = this.filters[config.filters[i].RequestParameter];
 
-      if (!filterArray) {
-        filterArray = [];
-      }
+			if (!filterArray) {
+				filterArray = [];
+			}
 
-      var filterDiv = $('div#filter_' + config.filters[i].Name);
-      var div = $('<div/>').addClass('alwaysvisible').appendTo(filterDiv);
+			var filterDiv = $('div#filter_' + config.filters[i].Name);
+			var div = $('<div/>').addClass('alwaysvisible').appendTo(filterDiv);
 
-      for (var j = 0; j < data.length; j++) {
+			for (var j = 0; j < data.length; j++) {
 
-        if (j == 5) {
+				if (j == 5) {
 
-          div = $('<div/>').addClass('hideable').appendTo(filterDiv);
+					div = $('<div/>').addClass('hideable').appendTo(filterDiv);
 
-          if (this.visibleFilterDivs[config.filters[i].Name]) {
-            div.show();
-          }
+					if (this.visibleFilterDivs[config.filters[i].Name]) {
+						div.show();
+					}
 
-          $('<a/>').html(self.visibleFilterDivs[config.filters[i].Name] ? 'Hide' : 'Show all').addClass('showhide').data('div', div).data('filterName', config.filters[i].Name).click(function () {
+					$('<a/>').html(self.visibleFilterDivs[config.filters[i].Name] ? 'Hide' : 'Show all').addClass('showhide').data('div', div).data('filterName', config.filters[i].Name).click(function () {
 
-            if ($(this).data('div').is(':visible')) {
+						if ($(this).data('div').is(':visible')) {
 
-              self.visibleFilterDivs[$(this).data('filterName')] = false;
+							self.visibleFilterDivs[$(this).data('filterName')] = false;
 
-              $(this).data('div').hide();
-              $(this).html('Show all');
-            } else {
+							$(this).data('div').hide();
+							$(this).html('Show all');
+						} else {
 
-              self.visibleFilterDivs[$(this).data('filterName')] = true;
+							self.visibleFilterDivs[$(this).data('filterName')] = true;
 
-              $(this).data('div').show();
-              $(this).html('Hide');
-            }
-          }).appendTo(filterDiv);
-        }
+							$(this).data('div').show();
+							$(this).html('Hide');
+						}
+					}).appendTo(filterDiv);
+				}
 
-        div.append($('<a/>').html(data[j].Key + ' (' + data[j].Value + ')').data('filterkey', config.filters[i].RequestParameter).data('filtervalue', data[j].Key).click(function () {
-          if (!$(this).hasClass('selected')) {
-            self.addFilter($(this).data('filterkey'), $(this).data('filtervalue'));
-            $(this).addClass('selected');
-            self.searchAgain();
-          } else {
-            self.removeFilter($(this).data('filterkey'), $(this).data('filtervalue'));
-            $(this).removeClass('selected');
-            self.searchAgain();
-          }
-        }).addClass(filterArray.indexOf(data[j].Key) > -1 ? 'selected' : ''));
-      }
-    }
-  }
+				div.append($('<a/>').html(data[j].Key + ' (' + data[j].Value + ')').data('filterkey', config.filters[i].RequestParameter).data('filtervalue', data[j].Key).click(function () {
+					if (!$(this).hasClass('selected')) {
+						self.addFilter($(this).data('filterkey'), $(this).data('filtervalue'));
+						$(this).addClass('selected');
+						self.searchAgain();
+					} else {
+						self.removeFilter($(this).data('filterkey'), $(this).data('filtervalue'));
+						$(this).removeClass('selected');
+						self.searchAgain();
+					}
+				}).addClass(filterArray.indexOf(data[j].Key) > -1 ? 'selected' : ''));
+			}
+		}
+	}
 }), _defineProperty(_demo, 'isBottomVisible', function isBottomVisible() {
-  var scroll = $(window).scrollTop();
-  var windowHeight = $(window).height();
+	var scroll = $(window).scrollTop();
+	var windowHeight = $(window).height();
 
-  var height = $(guiConfig.directResults).outerHeight() + $(guiConfig.directResults).offset().top;
+	var height = $(guiConfig.directResults).outerHeight() + $(guiConfig.directResults).offset().top;
 
-  return scroll + windowHeight >= height;
+	return scroll + windowHeight >= height;
 }), _defineProperty(_demo, 'clearFilters', function clearFilters() {
-  this.filters = {};
+	this.filters = {};
 }), _defineProperty(_demo, 'searchAgain', function searchAgain() {
-  this.search(_extends({}, this.previousSearch, { clearSearch: true, page: 0 }));
+	this.search(_extends({}, this.previousSearch, { clearSearch: true, page: 0 }));
 }), _defineProperty(_demo, 'addFilter', function addFilter(key, value) {
 
-  if (!this.filters[key]) {
-    this.filters[key] = [];
-  }
+	if (!this.filters[key]) {
+		this.filters[key] = [];
+	}
 
-  this.filters[key].push(value);
+	this.filters[key].push(value);
 }), _defineProperty(_demo, 'removeFilter', function removeFilter(key, value) {
 
-  var param = this.filters[key];
+	var param = this.filters[key];
 
-  if (!param) {
-    return;
-  }
+	if (!param) {
+		return;
+	}
 
-  var index = param.indexOf(value);
+	var index = param.indexOf(value);
 
-  if (index > -1) {
-    param.splice(index, 1);
-  }
+	if (index > -1) {
+		param.splice(index, 1);
+	}
 }), _demo);
 
 },{"./render.js":20,"./utils.js":21,"es6-promise":2,"loop54-js-lib":5}],20:[function(require,module,exports){
