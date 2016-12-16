@@ -1,78 +1,67 @@
+```
+,--.                        ,-----.  ,---.
+|  |    ,---.  ,---.  ,---. |  .--' /    |
+|  |   | .-. || .-. || .-. |'--. `\/  '  |
+|  '--.' '-' '' '-' '| '-' '.--'  /'--|  |
+`-----' `---'  `---' |  |-' `----'    `--'
+                     `--'
+```
+# Loop54 Demo Application
+This is a Javascript Demo using the Loop54 js library to implement an e-commerce product page for demonstration purposes. It is heavily dependent on jQuery and jQuery UI.
 
+To read more about our API we refer you to our documenation page (https://www.loop54.com/docs)
 
-Loop54 JS Demo for customer implementations
-===========================================
+## Read before use
+This is an example of how one could implement and use our javascript library and should be used as such, if you choose to use this application or parts of it in your production environment you should be aware that we do not offer support on this code once it's modified in any way. 
 
-This is a JavaScript Demo using a Loop54 SaaS API backend to implement an e-commerce product page. 
+Further more we cannot promise that this example will work in all browsers or on all platforms, you should always test it yourselves before using it in production to see that it fits your own requirements.
 
-Features
---------
+## Features
+In this application we show how to use our javascript library (https://www.npmjs.com/package/loop54-js-lib)
 
-Some of the implemented features:
+You will find example use of the following features in this application:
+* search (https://www.loop54.com/docs/product-search-site-search)
+  * continous scrolling and pagination
+  * direct hits
+  * recommended product
+  * error handling
+* event tracking (https://www.loop54.com/docs/product-search-event-tracking)
+  * purchase
+  * click
+* autocomplete (https://www.loop54.com/docs/product-search-autocomplete)
+* faceting (filters) (https://www.loop54.com/docs/faceted-search-navigation)
 
-- Product search
-- Autocomplete
-- Categories filtering
-- Personalisation
-- Tracking Events 
-	- Click
-	- AddToCart
-	- Purchase
+## Installation
+You need to have nodeJS and the node package manager, npm, installed:
 
-Technology
-----------
+`npm install` to install all dependencies
 
-The JS demo is written in ES6 using Node.JS, babel and browserify. 
-Scripts are included to transpile to ES5. Promises are used and therefore en an ES6-promise polyfill for IE is included.
+`npm install -g watch` (used to monitor directory changes)
 
-Getting started
----------------
+## Usage
+This application is meant for development, but if you wish to build it to use it in production
+you should follow the steps under the "production" chapter below.
 
-You can start by running the reference demo locally and modify the config in /src/index.js to reflect your environment/setting. Feel free to change it according to your needs/current solution. At the top of the file you can easily modify the config variable to reflect your Loop54 API parameters. To then include the demo on your site, adapt the guiConfig variable and include the transpiled JS-file on your site. 
+This demo application comes ready to use with our example product catalog (HelloWorld) which you are free to use and test for the purpose of understanding our API.
 
-Developer
----------
+If you wish to test this application with your own catalog you need to contact our support at support@loop54.com if you haven't already recieved your config file.
 
-- source files in /src
-- rebuild triggered on save in /src directory, refresh browser to see changes after build
-- Adaptable to your HTML setup in /src/index.js
-  - Change ID:s and classes
-  - Change engine URL to point to your engine (dev or prod)
-  - Copy or change code as needed, reference implementation
+### development
+On Mac/*nix: 
 
-Assuming you have git and node.js installed.
+`npm run dev`
 
-1. git clone <this repo url>
-
-2. install dependencies by running: 
+On Windows we assume you use some kind of bash (like git-bash): 
 	
-    > npm install
+`npm run watch:demo & npm run server`
 
-3. To install the development tool ‘watch’, run: 
+Everything in /src will be transpiled using browserify and babel to '/bin/scripts/loop54-demo-{version}.js'.
 
-	> npm install -g watch
+Then open http://localhost:5001/ and it will load customer.json for you.
 
-4. Now you can run the the watch tool, it will watch code folders for change and transpile if necessary, and at the same time launch a static webserver at ip:port defined in server.js. To do this run:
+### production
+To make a one time build of /src you can run the following command
 
-	Mac/*nix: 
+`npm run babelify:demo`
 	
-	> npm run dev
-	
-	Windows: In git-bash: 
-	
-	> npm run watch:demo & npm run server
-
-The demo will be transpiled using browserify and babel to '/bin/Scripts/loop54-demo-1.0.0.js’. This will be done on file change when running 
-
-	> npm run dev
-
-or whenever you run 
-
-	> npm run babelify:demo
-	
-See package.json for further details on the setup of the transpiling.
-
-Only using the lib
-------------------
-
-If you don't want to use the demo code, it is also possible to use the core lib directly, which will be exposed as global.Loop54 in the browser env once included (available from npmjs.org. For example usage, see this demo.
+See package.json for further details on the dependencies and details of the transpiling.
