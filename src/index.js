@@ -1,615 +1,522 @@
 /*globals $ */
 
-'use strict';
-
-// ES6 or using requre.js: import/require lib and use
-import lib from 'loop54-js-lib';
-var Promise = require('es6-promise').Promise;
-
+import loop54 from 'loop54-js-lib';
 import renderFunc from './render.js';
-
+import utils from './utils.js';
+import autocomplete from './autocomplete.js';
+import filters from './filters.js';
+import { Promise } from 'es6-promise';
 
 var guiConfig = {
-	inputSearch: 'input#search',
-	buttonSearch: 'a#search-button',
-	buttonNewUser: 'a#new-user-button',
-	inputSearchText: 'Input query here..',
-	filters: 'div#filters',
-	recommendedResults: 'div#recommendedresults',
-	directResults: 'div#directresults',
-	breadCrumbsContainer: '#breadcrumbs-wrapper',
-	queryInBreadCrumb: '#breadcrumbs-wrapper div.breadcrumbs div.block.search.current strong span',
-	makesSense: 'div#nosense',
-	makesSenseHeader: 'div#nosenseheader',
-	spellingSuggestions: 'div#spellingsuggestions',
-	reSearch: 'div#research',
-	related: 'div#related',
+  inputSearch: 'input#search',
+  buttonSearch: 'a#search-button',
+  buttonNewUser: 'a#new-user-button',
+  inputSearchText: 'Input query here..',
+  filtersContainer: '.left-column',
+  filterFunctions: '.filter-functions',
+  filters: 'div#filters',
+  pricesliderContainer: '#priceslidercontainer',
+  priceslider: '#priceslider',
+  pricesliderMinPriceInput: '#minPrice',
+  pricesliderMaxPriceInput: '#maxPrice',
+  recommendedResultsContainer: '.right-column',
+  recommendedResultsList: '#recommendedresultslist',
+  mainContainer: '.main-column',
+  directResults: 'div#directresults',
+  directResultsTotalItems: '.total-items',
+  directResultsList: '#directresultslist',
+  noResults: '#noresults',
+  related: 'div#related',
+  informationContainer: '#information',
 };
 
-
-var config = {
-	id: '18eb1533-a1f7-4ec8-9211-a561dcf43597',
-	name: 'Hello World',
-	url: 'http://helloworld.54proxy.se/',
-	autoCompleteQuest: 'AutoComplete',
-	searchQuest: 'Search',
-	similarProductsQuest: 'SimilarProducts',
-	createEventsQuest: 'CreateEvents',
-	filters: [{
-	 'Name': 'Kategorier',
-	 'RequestParameter': 'Faceting.Category',
-	 'ResponseParameter': 'Category'
-	}, {
-	 'Name': 'Märken',
-	 'RequestParameter': 'Faceting.Manufacturer',
-	 'ResponseParameter': 'Manufacturer'
-	}],
-	autoCompletePageSize: 8,
-	directResultsPageSize: 24,
-	recommendedResultsPageSize: 12,
-	continousScrolling: false,
-	instantSearch: false,
-	devMode: true,
-	cacheAutoComplete: false,
-	autoCompleteFacetingParameter: 'Faceting.Categories',
-	productTitleAttribute: 'Title',
-	productDescriptionAttribute: 'Description',
-	productImageUrlAttributes: ['ImageUrl'],
-	productImageUrl: '$1',
-	use26Request: true,
-	showValues: true
-};
-
-let render = renderFunc(config, guiConfig);
-lib.setConfig({url: config.url});
-
-// init eventhandlers
-$(document).ready(function () {
-
-
-	$(guiConfig.buttonNewUser).click(function() {
-		lib.getRandomUserId();
-	});
-
-	function doSearch(event) {
-		if (event.keyCode === 13 || event.type === "click") {
-			demo.search({
-				query: $(guiConfig.inputSearch).val(),
-				clearFilters: true,
-				clearSearch: true,
-				preventReSearch: false,
-				instant: false,
-				page: 0
-			});
-			$(guiConfig.inputSearch).autocomplete('close');
-		}
-	}
-
-	render.initFacetting();
-
-	$( guiConfig.inputSearch ).autocomplete({
-		source:  function( req, res ) {
-			demo.autocomplete(req, res);
-		},
-		minLength: 2,
-		select: function( event, ui ) {
-			event.preventDefault();
-			event.stopPropagation();
-			$(guiConfig.inputSearch).unbind('keyup', doSearch);
-			demo.search({
-				clearFilters: true,
-				instant: false,
-				clearSearch: true,
-				query: ui.item.value,
-				facet: ui.item.facet
-			});
-		},
-		response: function( event, ui ) {
-			$(guiConfig.inputSearch).bind('keyup', doSearch);
-		},
-		open: function() {
-			$( this ).removeClass( 'ui-corner-all' ).addClass( 'ui-corner-top' );
-		},
-		close: function() {
-			$( this ).removeClass( 'ui-corner-top' ).addClass( 'ui-corner-all' );
-		}
-	})
-	.autocomplete( 'instance' )._renderItem = function( ul, item ) {
-		var label = item.value;
-
-		if (item.facet) {
-			label = item.value + ' in ' + '<span class="facet">' + item.facet + '</span>';
-		}
-
-		return $( '<li>' )
-			.append( '<a>' + label + '</a>' )
-			.appendTo( ul );
-	};
-
-	$(guiConfig.buttonSearch).click(doSearch);
-	$(guiConfig.inputSearch).bind('keyup', doSearch);
-	$(guiConfig.inputSearch).focus();
-
-	if (config.continousScrolling) {
-		$(window).bind('scroll', function() {
-			demo.displayMore();
-		});
-	}
-});
-
-
-var utils = require('./utils.js');
+var config = {},
+  render;
 
 var demo = {
-	autoCompleteQueries: [],
-	fetchingAutoComplete: false,
-	instantTimer: null,
-	runningACRequests: 0,
-
-	activeIndex: -1,
-	filters: {},
-	autocompleteCache: {},
-	visibleFilterDivs: {},
-	previousSearch: {},
-
-	createEvent: function(entity, eventType) {
-
-		var req = {
-			Events: [{
-				Type: eventType,
-				Entity: {
-					EntityType: entity.EntityType,
-					ExternalId: entity.ExternalId,
-				}
-			}],
-			QuestName: config.createEventsQuest,
-		};
-
-		lib.getResponse(req, function(response) {
-
-			if (!response.success && config.devMode) {
-				console.log(response.errorMessage);
-			}
-
-		});
-
-	},
-
-	getAutoCompeteRequest: function (options) {
-
-		var req = {
-			QuestName: config.autoCompleteQuest,
-			QueryString: options.query
-		};
-
-		if (config.autoCompletePageSize > 0) {
-				req.AutoComplete_FromIndex = 0;
-				req.AutoComplete_ToIndex = config.autoCompletePageSize;
-		}
-
-		return (req);
-	},
-
-	previousSearch: {},
-
-	autocomplete: function (req, res) {
-
-		var req,
-			self = this,
-			cache = this.autocompleteCache;
-
-		function processResponse (response) {
-
-			if (!response.success && config.DevMode) {
-				alert(response.errorMessage);
-			}
-
-			var data = response.data;
-
-			if (data.AutoComplete.length > 0) {
-				res(self.formatAutoCompleteData(data));
-			} else {
-				res([]);
-			}
-		}
-
-		if (cache[req.term]) {
-			processResponse(cache[req.term]);
-		}
-
-		req = this.getAutoCompeteRequest({query: req.term});
-
-		lib.getResponse(req).then(function(response) {
-
-			cache[req.term] = response;
-
-			processResponse(response);
-
-		});
-
-	},
-
-	formatAutoCompleteData: function (data) {
-
-		var ret, facets;
-
-		ret = data.AutoComplete.map( (x) => {
-			return {
-				value: x.Key,
-				label: x.Key
-			};
-		});
-
-		facets = data.AutoCompleteFacets.map( x => {
-			return {
-				label: data.AutoCompleteFacetingString,
-				value: data.AutoCompleteFacetingString,
-				facet: x.Key
-			};
-		});
-
-		ret.unshift(...facets);
-
-		return ret;
-	},
-
-	getSearchRequest: function (options) {
-		var req = {
-			QuestName: config.searchQuest,
-			QueryString: options.query,
-			RelatedQueries_FromIndex: 0,
-			RelatedQueries_ToIndex: 5,
-			PreventReSearch: options.preventReSearch || false
-		};
-
-		if (config.directResultsPageSize > 0) {
-			req.DirectResults_FromIndex = config.directResultsPageSize * options.page;
-			req.DirectResults_ToIndex = (options.page + 1) * config.directResultsPageSize - 1;
-		}
-
-		if (config.recommendedResultsPageSize > 0) {
-			req.RecommendedResults_FromIndex = config.recommendedResultsPageSize * options.page;
-			req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
-		}
-
-		for (var i = 0; i < config.filters.length; i++) {
-			if (this.filters[config.filters[i].RequestParameter]) {
-				req[config.filters[i].RequestParameter] = this.filters[config.filters[i].RequestParameter];
-			}
-		}
-
-		return req;
-	},
-
-
-	search: function(options = {}) {
-
-		var req = {},
-			self = this,
-			isContinuation;
-
-		if (options.clearFilters || options.facet) {
-			this.clearFilters();
-		}
-
-		if (options.facet) {
-			this.addFilter(config.autoCompleteFacetingParameter, options.facet);
-		}
-
-		if (options.clearSearch) {
-			render.clearSearch();
-		}
-
-		options = {
-			instant: options.instant || false,
-			preventReSearch: options.preventReSearch || false,
-			page: options.page || 0,
-			query: options.query
-		};
-
-		this.previousSearch = { ...options };
-
-		isContinuation = options.page > 0 && config.continousScrolling;
-
-		if (!isContinuation) {
-			render.hidePopup();
-
-			if(!options.instant) {
-				render.hideAutocomplete();
-			}
-		}
-
-		req = this.getSearchRequest(options);
-
-		// utils.setHash({
-		//   config: config.Name,
-		//   page: req.search,
-		//   query: query
-		// });
-
-		$(guiConfig.inputSearch).val(options.query);
-
-		lib.getResponse(req).then( function(response) {
-
-				if (!response.success && config.DevMode) {
-					alert(response.errorMessage);
-				}
-
-				var data = response.data;
-
-				self.previousSearch.totalItems = data.DirectResults_TotalItems;
-
-				render.clearSearch(isContinuation);
-
-				if (!data.MakesSense) {
-					render.showMakesNoSense(data.DirectResults, data.SpellingSuggestions, options.query, self.search.bind(self));
-				}
-
-				if (data.ReSearchQueryString) {
-					render.showReSearch(data.ReSearchQueryString, options.query, self.search.bind(self));
-				}
-
-				if (data.RelatedQueries && data.RelatedQueries.length > 0) {
-					render.addRelated(data.RelatedQueries, self.search.bind(self));
-				}
-
-				if (data.DirectResults && data.DirectResults.length > 0) {
-					render.directResults(data.DirectResults, data.DirectResults_TotalItems, isContinuation, self.createEvent);
-				}
-
-				if (data.RecommendedResults && data.RecommendedResults.length > 0) {
-					render.recommendedResults(data.RecommendedResults, isContinuation, self.createEvent);
-				} else if (options.page < 1) {
-					render.noRecommendedResults();
-				}
-
-				self.updateFilters(data);
-
-				if (config.continousScrolling) {
-					self.displayMore();
-				} else if (data.DirectResults_TotalItems > config.directResultsPageSize) {
-					self.updatePaging(data.DirectResults_TotalItems, options.page, self.previousSearch, self.search.bind(self));
-				}
-
-			});
-// .catch( function (err) {
-//         console.log('Error when processing response:')
-//         console.log(err);
-//       });
-
-	},
-
-	updatePaging: function (totalItems, page, prevSearch, searchCallback) {
-
-		function showPage(p) {
-			if (p < 2)
-					return 'show';
-
-			if (p > pages - 3)
-					return 'show';
-
-			if (p > page - 2 && p < page + 2)
-					return 'show';
-
-			if (p == 2)
-					return 'dots';
-
-			if (p == pages - 3 && page != 0 && page != pages-1)
-					return 'dots';
-
-			return 'hide';
-		}
-
-		var pages = Math.ceil(totalItems / config.directResultsPageSize);
-
-		var pagesDiv = $('<div/>').addClass('pages').appendTo($('div#directresults'));
-
-		var i = 0;
-		for ( i; i < pages; i++) {
-
-			var show = showPage(i);
-
-			if (show == 'show') {
-
-				$('<a/>').html((i + 1)).data('page', i).addClass(page==i?'selected':'').click(function() {
-
-						searchCallback({
-							...prevSearch,
-							page: $(this).data('page')
-						});
-
-				}).appendTo(pagesDiv);
-			} else if (show == 'dots') {
-					$('<span>...</span>').appendTo(pagesDiv);
-			}
-		}
-
-	},
-
-	displayMore: function() {
-		//there are more results available
-
-		var ps = this.previousSearch;
-
-		if (this.isBottomVisible()) {
-
-			if (ps.totalItems > (ps.page + 1) * config.directResultsPageSize) {
-				this.search({
-					query: ps.query,
-					instant: false,
-					preventReSearch: ps.preventReSearch,
-					page: ps.page + 1
-				});
-			}
-			else if (ps.totalItems > config.directResultsPageSize && $(guiConfig.directResults).find('div.endofresults').length === 0) {
-				$(guiConfig.directResults).append($('<div/>').addClass('endofresults').html('No more results'));
-			}
-		}
-	},
-
-	updateFilters: function (res) {
-
-		var self = this;
-
-		for (var i = 0; i < config.filters.length; i++) {
-
-			$('div#filter_' + config.filters[i].Name).empty();
-
-			var data = res[config.filters[i].ResponseParameter];
-
-			if (data && data.length > 0) {
-
-				var filterArray = this.filters[config.filters[i].RequestParameter];
-
-				if (!filterArray) {
-					filterArray = [];
-				}
-
-				var filterDiv = $('div#filter_' + config.filters[i].Name);
-				var div = $('<div/>').addClass('alwaysvisible').appendTo(filterDiv);
-
-				for (var j = 0; j < data.length; j++) {
-
-					if (j == 5) {
-
-						div = $('<div/>').addClass('hideable').appendTo(filterDiv);
-
-						if (this.visibleFilterDivs[config.filters[i].Name]) {
-							div.show();
-						}
-
-						$('<a/>').html(self.visibleFilterDivs[config.filters[i].Name]?'Hide':'Show all').addClass('showhide').data('div', div).data('filterName',config.filters[i].Name).click(function() {
-
-							if ($(this).data('div').is(':visible')) {
-
-								self.visibleFilterDivs[$(this).data('filterName')] = false;
-
-								$(this).data('div').hide();
-								$(this).html('Show all');
-
-							} else {
-
-								self.visibleFilterDivs[$(this).data('filterName')] = true;
-
-								$(this).data('div').show();
-								$(this).html('Hide');
-							}
-						})
-						.appendTo(filterDiv);
-					}
-
-					div.append(
-						$('<a/>')
-							.html(data[j].Key + ' (' + data[j].Value + ')')
-							.data('filterkey', config.filters[i].RequestParameter)
-							.data('filtervalue', data[j].Key)
-							.click(function () {
-								if (!$(this).hasClass('selected')) {
-									self.addFilter($(this).data('filterkey'), $(this).data('filtervalue'));
-									$(this).addClass('selected');
-									self.searchAgain();
-								} else {
-									self.removeFilter($(this).data('filterkey'), $(this).data('filtervalue'));
-									$(this).removeClass('selected');
-									self.searchAgain();
-								}
-							})
-							.addClass(filterArray.indexOf(data[j].Key) > -1 ? 'selected' : '')
-					);
-				}
-			}
-		}
-	},
-
-
-
-		// JustSetHash: null,
-
-		// SetHash: function(newHash) {
-		//   this.JustSetHash = newHash;
-		//   location.hash = '#' + newHash;
-		// },
-
-
-	isBottomVisible: function() {
-		var scroll = $(window).scrollTop();
-		var windowHeight = $(window).height();
-
-		var height = $(guiConfig.directResults).outerHeight() + $(guiConfig.directResults).offset().top;
-
-		return (scroll + windowHeight) >= height;
-	},
-
-
-
-	// hashChanged: function(previousHash, currentHash) {
-
-	//   if (currentHash) {
-
-	//     currentHash = decodeURI(currentHash);
-
-	//     var moveFunc = function() {
-	//       var type = utils.getHashValue('page', currentHash);
-
-	//       if (type === 'search') {
-
-	//         var query = this.getHashValue('query', currentHash);
-	//         this.search(query, false, false, 0);
-	//       }
-	//     };
-
-	//     //make sure we dont do anything if the hash was set by code, not the user
-	//     if (currentHash !== this.justSetHash) {
-
-	//       var configName = this.getHashValue('config', currentHash);
-
-	//       //no demo config loaded or new config does not match
-	//       // ???
-	//       if ( config === null || configName !== config.Name) {
-	//         this.loadDemoConfig(configName, moveFunc);
-	//       }
-	//       else {
-	//         moveFunc();
-	//       }
-	//     }
-	//   }
-	// }
-
-
-
-	clearFilters: function() {
-		this.filters = {};
-	},
-
-	searchAgain: function() {
-		this.search({...this.previousSearch, clearSearch: true, page: 0});
-	},
-
-	addFilter: function(key, value) {
-
-		if (!this.filters[key]) {
-			this.filters[key] = [];
-		}
-
-		this.filters[key].push(value);
-
-	},
-
-	removeFilter: function(key, value) {
-
-		var param = this.filters[key];
-
-		if (!param) {
-			return;
-		}
-
-		var index = param.indexOf(value);
-
-		if (index > -1) {
-			param.splice(index, 1);
-		}
-
-	}
-
-
+  instantTimer: null,
+  runningACRequests: 0,
+  activeIndex: -1,
+  PriceFilter: {min: null, max: null},
+  previousSearch: {},
+  isSearchEnabled: true,
+
+  /*
+  * handleHashChanged is triggered when the hash in the URI changes.
+  * This is to make the demo work without reloading.
+  */
+  handleHashChanged: function(newConfig, search) {
+    $('.loading-layout').hide();
+    $('.error-layout').hide();
+    $('.demo-layout').show();
+    if(newConfig) {
+      config = newConfig;
+      render = renderFunc(config, guiConfig);
+      autocomplete.init(config.autoCompleteQuest, config.autoCompletePageSize);
+      filters.init(config.filters, guiConfig.filters, guiConfig.filterFunctions);
+      render.init();
+      loop54.setConfig({url: config.url});
+      if(config.continousScrolling) {
+        window.addEventListener('scroll', function() {
+          demo.displayMore();
+        }, true);
+      } else {
+        window.removeEventListener('scroll', function() {
+          demo.displayMore();
+        }, true);
+      }
+      if(location.hash === '') {
+        utils.setHash({
+          config: config.name,
+        });
+      }
+      utils.initShoppingCart(config.name, render.shoppingCart);
+    }
+
+    if(search) {
+      demo.search(search, true);
+    } else {
+      render.clearSearch();
+    }
+  },
+
+  /*
+  * Search functionality
+  */
+  buildSearchRequest: function(options, searchFromHashChange) {
+    var req = {
+      QuestName: config.searchQuest,
+      QueryString: options.query,
+      RelatedQueries_FromIndex: 0,
+      RelatedQueries_ToIndex: 5,
+      PreventReSearch: options.preventReSearch || false,
+    };
+
+    /*
+    * if this search is done on page load or hash change and continousScrolling is on then it should load everything
+    * from page 0 until the pagenumber in the url
+    */
+    if(config.directResultsPageSize > 0 && options.page > 0 && config.continousScrolling && searchFromHashChange) {
+      req.DirectResults_FromIndex = 0;
+      req.DirectResults_ToIndex = (options.page + 1) * config.directResultsPageSize - 1;
+    } else if(config.directResultsPageSize > 0) {
+      // this is the normal direct results search
+      req.DirectResults_FromIndex = config.directResultsPageSize * options.page;
+      req.DirectResults_ToIndex = (options.page + 1) * config.directResultsPageSize - 1;
+    }
+
+    if(config.recommendedResultsPageSize > 0) {
+      req.RecommendedResults_FromIndex = config.recommendedResultsPageSize * options.page;
+      req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
+    }
+
+    if(this.PriceFilter.min && this.PriceFilter.max) {
+      req['Faceting.MinPrice'] = this.PriceFilter.min;
+      req['Faceting.MaxPrice'] = this.PriceFilter.max;
+    }
+
+    for (var i = 0; i < config.filters.length; i++) {
+      var filterArray = filters.get(config.filters[i].requestParameter);
+      if(filterArray) {
+        if(filterArray.length > 0) {
+          req[config.filters[i].requestParameter] = filterArray;
+        }
+      }
+    }
+    return req;
+  },
+
+  search: function(options = {}, searchFromHashChange = false) {
+    var req = {},
+      self = this,
+      isContinuation;
+
+    if(options.clearFilters || options.facet || searchFromHashChange) {
+      filters.reset();
+      this.clearPricefilters();
+    }
+
+    if(options.facet) {
+      filters.add(config.autoCompleteFacetingParameter, options.facet);
+    }
+
+    if(options.clearSearch) {
+      render.clearSearch();
+    }
+
+    options = {
+      instant: options.instant || false,
+      preventReSearch: options.preventReSearch || false,
+      page: options.page || 0,
+      query: options.query,
+    };
+
+    utils.setHash({
+      config: config.name,
+      page: options.page,
+      section: 'search',
+      query: options.query,
+    });
+
+    this.previousSearch = { ...options };
+    isContinuation = options.page > 0 && config.continousScrolling && !searchFromHashChange;
+    if(!isContinuation) {
+      render.hidePopup();
+      if(!options.instant) {
+        autocomplete.hide();
+      }
+    }
+
+    // build request that can be sent to Loop54 API
+    req = this.buildSearchRequest(options, searchFromHashChange);
+
+    // Make sure input has the search query set as value
+    $(guiConfig.inputSearch).val(options.query);
+
+    // Make request to Loop54 API using the js library
+    loop54.getResponse(req).then( function(response) {
+      if(!response.success) {
+        console.log(response.errorMessage);
+        utils.showNotification('Error: ' + response.errorMessage);
+      } else {
+        var data = response.data;
+        self.previousSearch.totalItems = data.DirectResults_TotalItems;
+        render.clearSearch(isContinuation);
+
+        if(!data.MakesSense) {
+          render.showMakesNoSense(data.DirectResults.length, data.SpellingSuggestions, options.query, self.search.bind(self));
+        }
+
+        if(data.ReSearchQueryString) {
+          render.showReSearch(data.ReSearchQueryString, options.query, self.search.bind(self));
+        }
+
+        if(data.DirectResults && data.DirectResults.length > 0) {
+          render.directResults(data.DirectResults, data.DirectResults_TotalItems, isContinuation, loop54);
+        }
+
+        if(data.RelatedQueries && data.RelatedQueries.length > 0) {
+          render.addRelated(data.RelatedQueries, self.search.bind(self));
+        }
+
+        if(data.RecommendedResults && data.RecommendedResults.length > 0) {
+          render.recommendedResults(data.RecommendedResults, isContinuation, loop54);
+        } else if(options.page < 1) {
+          render.noRecommendedResults();
+        }
+
+        self.updatePricefilters(data);
+        filters.update(data, demo.searchAgain);
+
+        if(config.continousScrolling) {
+          self.addDisplayMoreButton();
+          self.displayMore();
+        } else if(data.DirectResults_TotalItems > config.directResultsPageSize) {
+          self.updatePaging(data.DirectResults_TotalItems, options.page, self.previousSearch, self.search.bind(self));
+        }
+      }
+    });
+  },
+
+  searchAgain: function() {
+    demo.search({...demo.previousSearch, clearSearch: true, page: 0});
+  },
+
+  /*
+  * Simple implementation of a range slider and price filters
+  * this will be be part of filters.js in the future
+  */
+
+  clearPricefilters: function() {
+    this.PriceFilter = {min: null, max: null};
+  },
+
+  updatePriceFilterValues: function(minPrice, maxPrice) {
+    $(guiConfig.pricesliderMinPriceInput).val(minPrice).trigger('change');
+    $(guiConfig.pricesliderMaxPriceInput).val(maxPrice).trigger('change');
+  },
+
+  updatePricefilters: function(res) {
+    if(config.productPriceMinAttribute && config.productPriceMaxAttribute) {
+      if(res[config.productPriceMinAttribute] && res[config.productPriceMaxAttribute]) {
+        var priceMin, priceMax, selectedPriceMin, selectedPriceMax;
+        priceMin = selectedPriceMin = res[config.productPriceMinAttribute];
+        priceMax = selectedPriceMax = res[config.productPriceMaxAttribute];
+
+        if(demo.PriceFilter.min && demo.PriceFilter.max) {
+          selectedPriceMin = demo.PriceFilter.min < priceMin || demo.PriceFilter.min > priceMax ? priceMin : demo.PriceFilter.min;
+          selectedPriceMax = demo.PriceFilter.max > priceMax || demo.PriceFilter.max < priceMin ? priceMax : demo.PriceFilter.max;
+        }
+        $(guiConfig.priceslider).slider( "option", {min: priceMin, max: priceMax, values: [selectedPriceMin, selectedPriceMax]});
+        demo.updatePriceFilterValues(selectedPriceMin, selectedPriceMax);
+        $(guiConfig.pricesliderContainer).show();
+      }
+    }
+  },
+
+  /*
+  * Extra functions needed for the demo
+  */
+
+  setVersionNumber: function() {
+    var version = '__VERSION__';
+    $('#version-number').html('Loop54-demo v' + version);
+  },
+
+  handleUpdateViewError: function(errorMessage, errorCode) {
+    $('.loading-layout').hide();
+    $('demo-layout').hide();
+    $('.error-layout').show();
+    $('.error-message').text(errorMessage);
+  },
+
+  updatePaging: function(totalItems, page, prevSearch, searchCallback) {
+    function showPage(p) {
+      if(p < 2)
+        return 'show';
+      if(p > pages - 3)
+        return 'show';
+      if(p > page - 2 && p < page + 2)
+        return 'show';
+      if(p == 2)
+        return 'dots';
+      if(p == pages - 3 && page != 0 && page != pages-1)
+        return 'dots';
+      return 'hide';
+    }
+    var pages = Math.ceil(totalItems / config.directResultsPageSize);
+    var pagesDiv = $('<div/>').addClass('pages').appendTo($(guiConfig.directResultsList));
+    var i = 0;
+    for ( i; i < pages; i++) {
+      var show = showPage(i);
+      if(show == 'show') {
+        $('<a/>', {href: '#'}).html((i + 1)).data('page', i).addClass(page==i?'selected':'').click(function(e) {
+          e.preventDefault();
+          searchCallback({
+            ...prevSearch,
+            page: $(this).data('page'),
+          });
+        }).appendTo(pagesDiv);
+      } else if(show == 'dots') {
+        $('<span>...</span>').appendTo(pagesDiv);
+      }
+    }
+  },
+
+  addDisplayMoreButton: function() {
+    /*
+    * adds a "display more" button at the bottom of direct results, this element is only visible
+    * on mobile view point (conditionally set in css)
+    */
+    var ps = this.previousSearch;
+    if(ps.totalItems > (ps.page + 1) * config.directResultsPageSize) {
+      $('.display-more').remove();
+      $(guiConfig.directResultsList).append($('<a/>').attr('href', '#').addClass('display-more').html('Show more'));
+    }
+  },
+
+  displayMore: function(displayMoreButtonWasClicked = false) {
+    /*
+    * get the previous search, to get all the information that is needed to show more
+    * results when you are scrolling
+    */
+    var ps = this.previousSearch;
+
+    /*
+    * Check if you are at the bottom of the page
+    * and check if we are in mobile viewpoint by checking if ".display-more" is hidden
+    * if all is true, then move on to decide if there are more pages to load or show end of page text
+    */
+    if(this.isBottomVisible() && $('.display-more').is(':hidden') || displayMoreButtonWasClicked) {
+      if(ps.totalItems > (ps.page + 1) * config.directResultsPageSize) {
+        this.search({
+          query: ps.query,
+          instant: false,
+          preventReSearch: ps.preventReSearch,
+          page: ps.page + 1,
+        });
+      } else if(ps.totalItems > config.directResultsPageSize && $(guiConfig.directResultsList).find('div.endofresults').length === 0) {
+        $(guiConfig.directResultsList).append($('<div/>').addClass('endofresults').html('No more results'));
+      }
+    }
+  },
+
+  isBottomVisible: function() {
+    var scroll = $(window).scrollTop();
+    var windowHeight = $(window).height();
+    var height = $(guiConfig.directResults).outerHeight() + $(guiConfig.directResults).offset().top;
+    return (scroll + windowHeight) >= height;
+  },
+
+  resetView: function(e) {
+    e.preventDefault();
+    utils.setHash({
+      config: config.name,
+    });
+    loop54.getRandomUserId();
+    utils.resetShoppingCart(config.name, render.shoppingCart);
+    $(guiConfig.mainContainer).removeClass('three-columns two-columns');
+    $(guiConfig.directResults).hide();
+    $(guiConfig.informationContainer).hide();
+    $(guiConfig.related).hide();
+    $(guiConfig.recommendedResultsContainer).hide();
+    $(guiConfig.makesSense).hide();
+    $(guiConfig.directResultsList).empty();
+    $(guiConfig.spellingSuggestions).empty();
+    $(guiConfig.inputSearch).val("");
+    $(guiConfig.noResults).show();
+    render.initFacetting();
+  },
+
+  toggleLeftColumn: function(e) {
+    if($('.left-column').hasClass('opened')) {
+      $('.left-column').addClass('closed').removeClass('opened');
+      $('.left-column-toggle').addClass('sm-show').removeClass('sm-hide');
+    } else {
+      $('.left-column').show();
+      $('.left-column').addClass('opened').removeClass('closed');
+      $('.left-column-toggle').addClass('sm-hide').removeClass('sm-show');
+    }
+  },
 };
+
+// init eventhandlers
+$(document).ready(function() {
+  function handleClickResetFilter(e) {
+    e.preventDefault();
+    filters.reset();
+    demo.clearPricefilters();
+    demo.searchAgain();
+  }
+
+  function handlePerformSearch(event) {
+    if(demo.isSearchEnabled) {
+      var searchFieldValue = $(guiConfig.inputSearch).val();
+      if(event.keyCode === 13 && searchFieldValue !== '' || event.type === 'click' && searchFieldValue !== '') {
+        demo.isSearchEnabled = false;
+        demo.search({
+          query: searchFieldValue,
+          clearFilters: true,
+          clearSearch: true,
+          preventReSearch: false,
+          instant: false,
+          page: 0,
+        });
+        $(guiConfig.inputSearch).autocomplete('close');
+        demo.isSearchEnabled = true;
+      }
+    }
+  }
+
+  function updatePriceLabel(input, label) {
+    $(label).text($(input).val());
+  }
+
+  function handleDisplayMoreClicked(e) {
+    e.preventDefault();
+    // remove display more button when loading more (it is then added back at the bottom)
+    $(e.target).remove();
+    /*
+    * trigger displayMore to load more results if there are any to load
+    * also sending "true" in order to tell displayMore that it was a click that triggered the function
+    */
+    demo.displayMore(true);
+  }
+
+  $(window).hashchange(function(e,data) {
+    utils.hashChanged(data.before.replace('#', ''),data.after.replace('#', ''), config, demo.handleHashChanged, demo.handleUpdateViewError);
+  });
+
+  if(location.hash === '') {
+    // set default hash if none is set already
+    utils.updateView(null, '', demo.handleHashChanged, demo.handleUpdateViewError, false);
+  } else {
+    var currentHash = location.hash.replace('#', '');
+    var configName = utils.getHashValue('config', currentHash);
+    if(configName && configName !== config.name) {
+      utils.updateView(configName, currentHash, demo.handleHashChanged, demo.handleUpdateViewError, false);
+    } else if(configName) {
+      utils.updateView(configName, currentHash, demo.handleHashChanged, demo.handleUpdateViewError, true);
+    }
+  }
+
+  $(guiConfig.priceslider).slider({
+    range: true,
+    min: 0,
+    max: 500,
+    step: 1,
+    slide: function( event, ui ) {
+      demo.updatePriceFilterValues(ui.values[0], ui.values[1]);
+    },
+    stop: function( event, ui ) {
+      demo.PriceFilter.min = ui.values[0];
+      demo.PriceFilter.max = ui.values[1];
+      demo.searchAgain();
+    }
+  });
+
+  /*
+  * Initialize autocomplete functionality
+  * this implementation is using jQuery UI's autocomplete library
+  */
+  $(guiConfig.inputSearch).autocomplete({
+    source:  function(req, res) {
+      autocomplete.getResults(req, res, loop54);
+    },
+    minLength: 2,
+    select: function(event, ui) {
+      event.preventDefault();
+      event.stopPropagation();
+      demo.search({clearFilters: true, instant: false, clearSearch: true, query: ui.item.value, facet: ui.item.facet});
+    },
+    open: function(event, ui) {
+      // prevent iOS from first setting focus on menu items instead of triggering click event
+      $('.ui-autocomplete').off('menufocus hover mouseover mouseenter');
+      $(this).removeClass('ui-corner-all').addClass('ui-corner-top');
+    },
+    close: function(event, ui) {
+      $(this).removeClass('ui-corner-top').addClass('ui-corner-all');
+    },
+  })
+  .autocomplete( 'instance' )._renderItem = function(ul, item) {
+    var label = item.value;
+    if(item.facet) {
+      label = item.value + ' in ' + '<span class="facet">' + item.facet + '</span>';
+    }
+    return $( '<li>' ).append( '<a>' + label + '</a>' ).appendTo( ul );
+  };
+
+  /*
+  * Create eventlisteners for various elements, we are using jQuery to handle all the events
+  */
+  $(document).on('click', '.display-more', handleDisplayMoreClicked);
+  $('#resetfiltersbutton').on('click', handleClickResetFilter);
+  $('#minPrice').on('change', function(e){updatePriceLabel(e.target, '#minPriceLabel')});
+  $('#maxPrice').on('change', function(e){updatePriceLabel(e.target, '#maxPriceLabel')});
+  $('#logo img').on('click', demo.resetView);
+  $('.left-column-toggle').on('click', demo.toggleLeftColumn);
+  $('.close-left-column').on('click', demo.toggleLeftColumn);
+  $(guiConfig.buttonSearch).on('click', handlePerformSearch);
+  $(guiConfig.inputSearch).on('keyup', handlePerformSearch);
+  $(guiConfig.inputSearch).focus();
+  $(guiConfig.buttonNewUser).click(function() {
+    loop54.getRandomUserId();
+    utils.resetShoppingCart(config.name, render.shoppingCart);
+    utils.showNotification('You are now searching as a new user!', 2000);
+  });
+  $(document).on('click', function(e) {
+    if($('.shopping-cart').is(':visible')) {
+      $('.shopping-cart').hide();
+    }
+  });
+  $('.shopping-cart').on('click', function(e) {
+    e.stopPropagation();
+  })
+  $('#cart').on('click', function(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    $('.shopping-cart').fadeToggle('fast');
+  });
+
+  demo.setVersionNumber();
+});

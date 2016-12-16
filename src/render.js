@@ -1,65 +1,27 @@
-
 // requires jQuery to be in global scope
-/*globals $ */
+/* globals $ */
 
-let lib = global.Loop54;
+import utils from './utils.js';
+import track from './track.js';
 
-// let utils = require('utils');
-
-let render = function (config, guiConfig) {
-
-
-  function initFacetting() {
-
-    let $filters = $(guiConfig.filters);
-
-    $filters.empty();
-
-    for (var i = 0; i < config.filters.length; i++) {
-      $filters
-        .append($('<h2/>').html(config.filters[i].Name))
-        .append($('<div/>').attr('id', 'filter_' + config.filters[i].Name).addClass('filterdiv'));
-    }
-
+let render = function(config, guiConfig) {
+  function showInformationBox(html, infoType) {
+    $(guiConfig.informationContainer).empty().removeClass('info success warning error');
+    $(guiConfig.informationContainer).addClass(infoType).html(html);
+    $(guiConfig.informationContainer).show();
   }
 
-
-  // $(window).hashchange(function (e,data) {
-
-  //     Demo.HashChanged(data.before.replace('#', ''),data.after.replace('#', ''));
-
-  // });
-
-
-
-  // $(document).click(function(event) {
-
-  //     if(!$(event.target).is('div#autocomplete') && !$(event.target).is('div#autocomplete *'))
-  //         Demo.ClearSuggestions();
-
-  // });
-  
-  
-  // Demo.LoadConfig(function(){
-    
-  //   Demo.HashChanged(null,location.hash.replace('#', ''));
-
-  // });
-
-
   function replaceImageUrl(entity) {
-
     var ret = config.productImageUrl;
 
     for (var i = 0; i < config.productImageUrlAttributes.length; i++) {
-
       var attr = config.productImageUrlAttributes[i];
 
       var attrValue = '';
 
-      if (attr == 'ExternalId') {
+      if(attr == 'ExternalId') {
         attrValue = entity.ExternalId;
-      } else if (entity.Attributes[config.productImageUrlAttributes[i]]) {
+      } else if(entity.Attributes[config.productImageUrlAttributes[i]]) {
         attrValue = entity.Attributes[config.productImageUrlAttributes[i]][0];
       }
 
@@ -71,266 +33,391 @@ let render = function (config, guiConfig) {
   }
 
   function getEntityTitle(entity) {
-
-    if (entity.Attributes[config.productTitleAttribute]) {
+    if(entity.Attributes[config.productTitleAttribute]) {
       return entity.Attributes[config.productTitleAttribute][0];
     }
 
     return '';
   }
 
-  function getEntityDescription(entity) {
-
-    if (entity.Attributes[config.ProductDescriptionAttribute]) {
-      return entity.Attributes[config.ProductDescriptionAttribute][0];
+  function getEntityPrice(entity) {
+    if(entity.Attributes['Price']) {
+      return entity.Attributes['Price'][0];
     }
 
     return '';
   }
 
+  function getEntityDescription(entity) {
+    if(entity.Attributes[config.productDescriptionAttribute]) {
+      return entity.Attributes[config.productDescriptionAttribute][0];
+    }
+
+    return '';
+  }
 
   return {
+    init: function() {
+      track.init(config);
+      this.initFacetting();
+    },
 
-    showMakesNoSense: function (directResults, spellingSuggestions, query, searchCallback) {
+    initFacetting: function() {
+      $(guiConfig.pricesliderContainer).hide();
+      $(guiConfig.filterFunctions).hide();
+      $(guiConfig.filters).empty();
 
-      $(guiConfig.makesSense).show();
+      for (var i = 0; i < config.filters.length; i++) {
+        $(guiConfig.filters)
+        .append($('<h6/>').attr('id', 'filter_header_' + config.filters[i].name.replace(' ','_')).html(config.filters[i].name).addClass('filterdiv-header'))
+        .append($('<div/>').attr('id', 'filter_' + config.filters[i].name.replace(' ','_')).addClass('filterdiv'));
+      }
+    },
 
-      $(guiConfig.makesSenseHeader).html("We did not understand the query \"" + query + "\". ");
+    showMakesNoSense: function(directResultsLength, spellingSuggestions, query, searchCallback) {
+      var infoType = 'error';
+      var informationHeader = $('<div />')
+        .addClass('information-header')
+        .html('We did not understand the query "<b>' + query + '</b>". ');
+      var informationContent = '';
 
-      if (directResults && directResults.length > 0) {
-        $(guiConfig.makesSenseHeader).append($("<span>The results below are approximate.</span>"));
+      if(directResultsLength > 0) {
+        infoType = 'warning';
+        informationHeader.append($('<span>The results below are approximate.</span>'));
       }
 
-      if (spellingSuggestions && spellingSuggestions.length > 0) {
+      if(spellingSuggestions && spellingSuggestions.length > 0) {
+        infoType = 'warning';
+        informationContent = $('<div />')
+          .addClass('information-content')
+          .html('Did you mean to search for: ');
+        var informationContentList = $('<span />').addClass('information-list');
 
-        $(guiConfig.spellingSuggestions).html("Did you mean to search for: ");
+        function onClick(e) {
+          e.preventDefault();
+          searchCallback({query: $(this).data('query'), clearFilters: true});
+        }
 
         for (var i = 0; i < spellingSuggestions.length; i++) {
-          $(guiConfig.spellingSuggestions).append(
-            $('<a/>')
-              .html(spellingSuggestions[i].Key)
-              .data('query', spellingSuggestions[i].Key)
-              .click(function () {
-                searchCallback({
-                  query: $(this).data('query'),
-                  clearFilters: true
-                });
-              })
+          informationContentList.append($('<a />', {href: '#'})
+            .html(spellingSuggestions[i].Key)
+            .data('query', spellingSuggestions[i].Key)
+            .click(onClick)
           );
         }
+
+        informationContent.append(informationContentList);
       }
+
+      var makesNoSenseHTML = $('<div />')
+        .append(informationHeader)
+        .append(informationContent);
+      showInformationBox(makesNoSenseHTML, infoType);
     },
 
-    showReSearch: function (reSearchString, originalQuery, searchCallback) {
-debugger;
-      $(guiConfig.reSearch)
-        .show()
-        .html('We assumed you meant \'' + reSearchString + '\'. Can you blame us?<br /><br />Search instead for ')
-        .append(
-          $('<a />').html(originalQuery).click(function () {
-            searchCallback({
-              query: $(this).data('query'),
-              clearFilters: true,
-              instant: false,
-              preventReSearch: true
-            });
-          })
-      );
-    },
-
-    addRelated: function (related, searchCallback) {
-
-      function onClick () {
+    showReSearch: function(reSearchString, originalQuery, searchCallback) {
+      function onClick(e) {
+        e.preventDefault();
         searchCallback({
           query: $(this).data('query'),
           clearFilters: true,
           instant: false,
-          preventReSearch: false
+          preventReSearch: true,
         });
       }
 
-      for (var i = 0; i < related.length; i++) {
-
-        $(guiConfig.related)
-          .append(
-            $('<a/>')
-              .html(related[i].Key)
-              .data('query', related[i].Key)
-              .click(onClick)
-          );
-      }
-
-      $(guiConfig.related).show();
-
+      var informationHeader = $('<div />')
+        .addClass('information-header')
+        .html('We assumed you meant "<b>' + reSearchString + '</b>".')
+      var informationContent = $('<div />')
+        .addClass('information-content')
+        .html('Search instead for ')
+        .append($('<a />', {href: '#'})
+          .html(originalQuery).click(onClick)
+        );
+      showInformationBox(informationHeader, 'warning')
     },
 
-    directResults: function (directResults, totalItems, isContinuation, createEventCallback) {
+    addRelated: function(related, searchCallback) {
+      function onClick(e) {
+        e.preventDefault();
+        searchCallback({
+          query: $(this).data('query'),
+          clearFilters: true,
+          instant: false,
+          preventReSearch: false,
+        });
+      }
 
+      var relatedList = $('<span />').addClass('related-list');
+
+      for (var i = 0; i < related.length; i++) {
+        relatedList.append($('<a />', {href: '#'})
+          .html(related[i].Key)
+          .data('query', related[i].Key)
+          .click(onClick)
+        );
+      }
+
+      $(guiConfig.related).empty()
+        .append($('<span/>').addClass('related-header').html('Related'))
+        .append(relatedList);
+      $(guiConfig.related).show();
+    },
+
+    directResults: function(directResults, totalItems, isContinuation, loop54) {
       if(!isContinuation) {
-        $(guiConfig.directResults).append($('<h2>We found ' + totalItems + ' results</h2>'));
+        $(guiConfig.directResultsTotalItems).text(totalItems);
+      }
+
+      if(totalItems > 0) {
+        $(guiConfig.noResults).hide();
+        $(guiConfig.directResults).show();
+      } else {
+        $(guiConfig.directResults).hide();
+        $(guiConfig.noResults).show();
       }
 
       for (var i = 0; i < directResults.length; i++) {
-        this.renderEntity(guiConfig.directResults, directResults[i].Key, directResults[i].Value, createEventCallback);
+        this.renderEntity(guiConfig.directResultsList, directResults[i].Key, directResults[i].Value, loop54);
       }
-
     },
 
-    recommendedResults: function (recommendedResults, isContinuation, createEventCallback) {
+    recommendedResults: function(recommendedResults, isContinuation, loop54) {
+      if($(guiConfig.recommendedResultsContainer).not(':visible') && !isContinuation || $(guiConfig.recommendedResultsContainer).is(':visible') && isContinuation) {
+        $(guiConfig.recommendedResultsContainer).show();
+        $('.demo-content')
+          .removeClass('two-columns')
+          .addClass('three-columns');
 
-      if (!isContinuation) {
-        $(guiConfig.recommendedResults).append($('<h2>You might also like</h2>'));
+        for (var i = 0; i < recommendedResults.length; i++) {
+          this.renderEntity(guiConfig.recommendedResultsList, recommendedResults[i].Key, recommendedResults[i].Value, loop54, 'mdl-cell--12-col');
+        }
       }
-
-      for (var i = 0; i < recommendedResults.length; i++) {
-        this.renderEntity(guiConfig.recommendedResults, recommendedResults[i].Key, recommendedResults[i].Value, createEventCallback);
-      }
-
     },
 
-    noRecommendedResults: function () {
-      $(guiConfig.recommendedResults).hide();
-      $(guiConfig.directResults).addClass('fillout');
-
+    noRecommendedResults: function() {
+      $(guiConfig.recommendedResultsContainer).hide();
+      $('.demo-content')
+        .removeClass('three-columns')
+        .addClass('two-columns');
     },
 
-
-    clearSearch: function (keepResults) {
-
-      if (!keepResults) {
-        $(guiConfig.directResults).empty().removeClass('fillout');
-
-        $(guiConfig.recommendedResults).empty().show();
+    clearSearch: function(keepResults) {
+      if(!keepResults) {
+        $(guiConfig.mainContainer).removeClass('three-columns two-columns');
+        $(guiConfig.directResults).hide();
+        $(guiConfig.recommendedResultsContainer).hide();
+        $(guiConfig.noResults).show();
+        $(guiConfig.directResultsList).empty();
+        $(guiConfig.recommendedResultsList).empty();
       }
-
-      $(guiConfig.makesSense).hide();
-      $(guiConfig.spellingSuggestions).empty();
-      $(guiConfig.research).hide();
-      $(guiConfig.related).empty().hide();
-
+      $(guiConfig.informationContainer).hide();
+      $(guiConfig.related).hide();
     },
 
-    hidePopup: function () {
+    hidePopup: function() {
       $('div#popupbg').hide();
       $('div.entitypopup').remove();
     },
 
-    hideAutocomplete: function () {
-      $('div#autocomplete').hide();
-    },
-
-    renderEntity: function(element, entity, value, createEventCallback) {
-
+    renderEntity: function(element, entity, value, loop54, extraClass) {
       var imgUrl = replaceImageUrl(entity),
-          entityTitle = getEntityTitle(entity);
+        entityTitle = getEntityTitle(entity),
+        entityPrice = getEntityPrice(entity),
+        customClass = '';
       var self = this;
 
-      var div = $('<div/>')
-        .addClass('entity')
-        .data('entity', entity)
-        .data('value', value)
-        .click(function() {
-          self.showEntity($(this).data('entity'), $(this).data('value'), createEventCallback);
-        });
+      if(imgUrl == '') {
+        var randomNumber = Math.floor(Math.random() * 5) + 1;
+        customClass = ' placeholder-image';
+        imgUrl = '/images/placeholder-'+randomNumber+'.png';
+      }
 
-      if (config.showValues) {
+      var div = $('<div/>')
+      .addClass('entity')
+      .addClass(extraClass)
+      .addClass('demo-card-square mdl-card mdl-shadow--2dp')
+
+      if(config.showValues) {
         div.attr('title', value);
       }
 
-      var a = $('<a/>').appendTo(div);
-      var imgDiv = $('<div/>').appendTo(a);
-      $('<img/>')
-        .attr('src', imgUrl)
-        .appendTo(imgDiv)
-        .on('load', function () {
+      var emptyDiv = $('<div/>')
+      .addClass('mdl-card__title mdl-card--expand' + customClass)
+      .css({'background-image': 'url(\'' + imgUrl + '\')'})
+      .data('entity', entity)
+      .data('value', value)
+      .click(function () {
+        self.showEntity($(this).data('entity'), $(this).data('value'), loop54);
+      })
+      .appendTo(div);
 
-          if ($(this).width() > $(this).height()) {
-            $(this).css('width', '100%');
-          } else {
-            $(this).css('height', '100%');
-          }
-        })
-        .on('error', function() {
-          $(this).remove();
-        });
+      var title = $('<div/>')
+      .addClass('mdl-card__supporting-text')
+      .html(entityTitle)
+      .data('entity', entity)
+      .data('value', value)
+      .click(function () {
+        self.showEntity($(this).data('entity'), $(this).data('value'), loop54);
+      })
+      .appendTo(div);
 
-      $('<span/>').html(entityTitle).appendTo(a);
+      var actionsDiv = $('<div/>')
+      .addClass('mdl-card__actions mdl-card--border')
+      .appendTo(div);
+
+      if(entityPrice !== '') {
+        var price = $('<span/>')
+        .html(Math.ceil(entityPrice) + '.-')
+        .appendTo(actionsDiv)
+      }
+
+      var icon = $('<i/>')
+      .addClass('material-icons')
+      .html('shopping_cart')
+      .click(function () {
+        track.event(entity, 'purchase', loop54, self.shoppingCart);
+      })
+      .appendTo(actionsDiv)
 
       div.appendTo($(element));
     },
 
-    showEntity: function(entity, value, createEventCallback) {
+    showEntity: function(entity, value, loop54) {
+      var self = this;
+      track.event(entity, 'click', loop54);
 
-        // Demo.SetHash("config=" + demoConfig.Name + "&page=entity&id=" + entity.ExternalId);
-
-      createEventCallback(entity, 'click');
-
-      $('div#popupbg').show();
-      $('div.entitypopup').remove();
-
-      var div = $('<div/>').addClass('entitypopup').appendTo($('body')).css('top', $(window).scrollTop() + 100);
-
-      function closePopup() {
+      function closePopup(e) {
+        e.preventDefault();
         $('div#popupbg').hide();
         $('div.entitypopup').remove();
       }
 
-      $('<a/>').addClass('close').html('X').click(closePopup).appendTo(div);
+      function handlePurchaseEvent(e) {
+        e.preventDefault();
+        track.event(entity, 'purchase', loop54, self.shoppingCart);
+      }
+
+      // show the grey background and remove the old popup container
+      $('div#popupbg').show();
+      $('div.entitypopup').remove();
+
+      // create a new popup container
+      var entityPopup = $('<div/>').addClass('entitypopup').appendTo($('body')).css('top', $(window).scrollTop() + 100);
+
+      // set up listeners for closing the popup
+      $('<a />', {href: '#'}).addClass('close').html('x').click(closePopup).appendTo(entityPopup);
       $('div#popupbg').click(closePopup);
-      $(window).bind('keydown', function (event) {
-        if (event.which === 27 && $('div#popupbg').is(':visible')) {
-          closePopup();
-        }
+      $(window).on('keydown', function (e) {
+        if(e.which === 27 && $('div#popupbg').is(':visible')) { closePopup(e); }
       });
 
-      //main stuff
+      // create image container
+      var imgUrl = replaceImageUrl(entity);
+      if(imgUrl == '') {
+        var randomNumber = Math.floor(Math.random() * 5) + 1;
+        imgUrl = '/images/placeholder-'+randomNumber+'.png';
+      }
+      var imageContainer = $('<div />').addClass('popup-image-container');
+      var image = $('<img />').attr('src', imgUrl);
+      $('<a />').attr({'href': imgUrl, 'target': '_blank'}).html(image).appendTo(imageContainer);
+      imageContainer.appendTo(entityPopup);
 
-      $('<img/>')
-        .attr('src', replaceImageUrl(entity))
-        .appendTo(div)
-        .on('error', function () {
-          $(this).remove();
-        });
+      // create information container
+      var informationContainer = $('<div />').addClass('popup-information-container');
 
-      $('<h2/>').html(getEntityTitle(entity)).appendTo(div);
+      // entity title field
+      $('<h2 />').addClass('popup-title-field').html(getEntityTitle(entity)).appendTo(informationContainer);
 
-      $('<div/>').addClass('description').html(getEntityDescription(entity)).appendTo(div);
-
-      $('<a/>').addClass('button').html('Purchase').click(function () {
-        createEventCallback(entity, 'purchase');
-        $(this).off('click').addClass('inactive');
-      }).appendTo(div);
-
-
-      //extra info
-      if (!config.devMode)
-      {
-        $('<a/>').html('Show all attributes').addClass('showhide').appendTo(div).click(function() {
-          $('div.entitypopup div.moreinfo').show();
-          $(this).remove();
-        });
+      var functionsContainer = $('<div />').addClass('popup-functions-container');
+      // price tag (if present)
+      var entityPrice = getEntityPrice(entity);
+      if(entityPrice !== '') {
+        $('<span />').addClass('popup-price-field').html(Math.ceil(entityPrice) + '.-').appendTo(functionsContainer);
       }
 
-      var hiddenDiv = $('<div/>').addClass('moreinfo').appendTo(div);
+      // purchase button
+      $('<a />', {href: '#'})
+        .addClass('popup-purchase-button')
+        .html('Purchase <i class="material-icons">shopping_cart</i>').click(handlePurchaseEvent).appendTo(functionsContainer);
 
-      $('<span/>').html('<b>EntityType</b>: ' + entity.EntityType).appendTo(hiddenDiv);
-      $('<span/>').html('<b>ExternalId</b>: ' + entity.ExternalId).appendTo(hiddenDiv);
-      $('<span/>').html('<b>Value</b>: ' + value).appendTo(hiddenDiv);
+      functionsContainer.appendTo(informationContainer);
+
+      // entity description field
+      $('<div />').addClass('popup-description-field').html('<div class="popup-description-title">Description</div>' + getEntityDescription(entity)).appendTo(informationContainer);
+
+      informationContainer.appendTo(entityPopup);
+
+      // extra info (hidden by default)
+      $('<a />', {href: '#'}).html('Show all attributes').addClass('popup-extra-info-showhide').appendTo(entityPopup).click(function (e) {
+        e.preventDefault();
+        $('.popup-extra-information').toggle();
+        var text = $('.popup-extra-info-showhide').text();
+        $('.popup-extra-info-showhide').text(text == 'Show all attributes' ? 'Hide all attributes' : 'Show all attributes');
+      });
+
+      var extraInfoContainer = $('<div />').addClass('popup-extra-information').appendTo(entityPopup);
+      var extraInfoTopContainer = $('<div />').addClass('popup-extra-info-top');
+
+      $('<p />').addClass('popup-extra-info-row').html('<span class="popup-extra-info-label">EntityType</span><p>' + entity.EntityType + '</p>').appendTo(extraInfoTopContainer);
+      $('<p />').addClass('popup-extra-info-row').html('<span class="popup-extra-info-label">ExternalId</span><p>' + entity.ExternalId + '</p>').appendTo(extraInfoTopContainer);
+      $('<p />').addClass('popup-extra-info-row').html('<span class="popup-extra-info-label">Value</span><p>' + value + '</p>').appendTo(extraInfoTopContainer);
+      extraInfoTopContainer.appendTo(extraInfoContainer);
 
       for (var key in entity.Attributes) {
-        $('<span/>').html('<b>' + key + '</b>: ' + entity.Attributes[key]).appendTo(hiddenDiv);
-      }
-
-      if (config.devMode) {
-        hiddenDiv.show();
+        $('<p />').addClass('popup-extra-info-row').html('<span class="popup-extra-info-label">' + key + '</span><p>' + entity.Attributes[key] + '</p>').appendTo(extraInfoContainer);
       }
     },
 
-    initFacetting
+    shoppingCart: function(items, totalAmount) {
+      $('.shopping-cart-total-items').each(function(i, item) {
+        item.innerText = totalAmount;
+      });
 
+      var shoppingCartItems = $('.shopping-cart-items');
+      shoppingCartItems.empty();
+      $(items).each(function(i, item){
+        var li = $('<li/>')
+        .addClass('clearfix');
+
+        if(item.image == '') {
+          var randomNumber = Math.floor(Math.random() * 5) + 1;
+          var image = '/images/placeholder-'+randomNumber+'.png';
+        }
+
+        $('<img/>')
+        .attr('src', item.image || image)
+        .appendTo(li);
+
+        $('<span/>')
+        .addClass('item-name')
+        .html('<span class="item-name">'+item.name+'</span>')
+        .appendTo(li);
+
+        if(item.price != null) {
+          $('<span/>')
+          .addClass('item-price')
+          .html('<span class="item-price">'+Math.ceil(item.price)+'.-</span>')
+          .appendTo(li);
+        };
+
+        $('<span/>')
+        .addClass('item-quantity')
+        .html('<span class="item-quantity">Quantity: '+item.amount+'</span>')
+        .appendTo(li);
+
+        li.appendTo(shoppingCartItems);
+      });
+
+      if(shoppingCartItems.find('li').length < 1) {
+        var li = $('<li/>')
+        .addClass('clearfix')
+        .html('No purchases yet!')
+        .appendTo(shoppingCartItems)
+      }
+    },
   };
-
 };
-
 
 export default render;
