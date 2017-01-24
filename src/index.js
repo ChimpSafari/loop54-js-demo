@@ -105,21 +105,28 @@ var demo = {
       req.DirectResults_ToIndex = (options.page + 1) * config.directResultsPageSize - 1;
     }
 
-    if(config.recommendedResultsPageSize > 0) {
+    if(config.recommendedResultsPageSize > 0 && options.page > 0 && config.continousScrolling && searchFromHashChange) {
+      req.RecommendedResults_FromIndex = 0;
+      req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
+    } else if(config.recommendedResultsPageSize > 0) {
       req.RecommendedResults_FromIndex = config.recommendedResultsPageSize * options.page;
       req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
     }
 
-    if(this.PriceFilter.min && this.PriceFilter.max) {
-      req['Faceting.MinPrice'] = this.PriceFilter.min;
-      req['Faceting.MaxPrice'] = this.PriceFilter.max;
-    }
-
     for (var i = 0; i < config.filters.length; i++) {
-      var filterArray = filters.get(config.filters[i].requestParameter);
-      if(filterArray) {
-        if(filterArray.length > 0) {
-          req[config.filters[i].requestParameter] = filterArray;
+      if(config.filters[i].type == 'numberRange') {
+        for(var y = 0; y < config.filters[i].requestParameter.length; y++) {
+          var filterValue = filters.get(config.filters[i].requestParameter[y]);
+          if(filterValue) {
+            req[config.filters[i].requestParameter[y]] = filterValue;
+          }
+        }
+      } else {
+        var filterArray = filters.get(config.filters[i].requestParameter);
+        if(filterArray) {
+          if(filterArray.length > 0) {
+            req[config.filters[i].requestParameter] = filterArray;
+          }
         }
       }
     }
@@ -133,7 +140,6 @@ var demo = {
 
     if(options.clearFilters || options.facet || searchFromHashChange) {
       filters.reset();
-      this.clearPricefilters();
     }
 
     if(options.facet) {
@@ -205,8 +211,7 @@ var demo = {
           render.noRecommendedResults();
         }
 
-        self.updatePricefilters(data);
-        filters.update(data, demo.searchAgain);
+        filters.update(data, demo.searchAgain, demo);
 
         if(config.continousScrolling) {
           self.addDisplayMoreButton();
@@ -218,40 +223,8 @@ var demo = {
     });
   },
 
-  searchAgain: function() {
-    demo.search({...demo.previousSearch, clearSearch: true, page: 0});
-  },
-
-  /*
-  * Simple implementation of a range slider and price filters
-  * this will be be part of filters.js in the future
-  */
-
-  clearPricefilters: function() {
-    this.PriceFilter = {min: null, max: null};
-  },
-
-  updatePriceFilterValues: function(minPrice, maxPrice) {
-    $(guiConfig.pricesliderMinPriceInput).val(minPrice).trigger('change');
-    $(guiConfig.pricesliderMaxPriceInput).val(maxPrice).trigger('change');
-  },
-
-  updatePricefilters: function(res) {
-    if(config.productPriceMinAttribute && config.productPriceMaxAttribute) {
-      if(res[config.productPriceMinAttribute] && res[config.productPriceMaxAttribute]) {
-        var priceMin, priceMax, selectedPriceMin, selectedPriceMax;
-        priceMin = selectedPriceMin = res[config.productPriceMinAttribute];
-        priceMax = selectedPriceMax = res[config.productPriceMaxAttribute];
-
-        if(demo.PriceFilter.min && demo.PriceFilter.max) {
-          selectedPriceMin = demo.PriceFilter.min < priceMin || demo.PriceFilter.min > priceMax ? priceMin : demo.PriceFilter.min;
-          selectedPriceMax = demo.PriceFilter.max > priceMax || demo.PriceFilter.max < priceMin ? priceMax : demo.PriceFilter.max;
-        }
-        $(guiConfig.priceslider).slider( "option", {min: priceMin, max: priceMax, values: [selectedPriceMin, selectedPriceMax]});
-        demo.updatePriceFilterValues(selectedPriceMin, selectedPriceMax);
-        $(guiConfig.pricesliderContainer).show();
-      }
-    }
+  searchAgain: function(clearSearch = true) {
+    demo.search({...demo.previousSearch, clearSearch: clearSearch, page: 0});
   },
 
   /*
@@ -378,6 +351,17 @@ var demo = {
       $('.left-column-toggle').addClass('sm-hide').removeClass('sm-show');
     }
   },
+
+  addRangeFilter: function(values, requestParameters) {
+    /*
+    * this function is used to handle the range changes of the range slider
+    * for more information check filters.js
+    */
+    for(var i=0; i < requestParameters.length; i++) {
+      filters.add(requestParameters[i], values[i], true);
+    }
+    demo.searchAgain(false); // trigger a new search without clearing all the content
+  },
 };
 
 // init eventhandlers
@@ -385,8 +369,7 @@ $(document).ready(function() {
   function handleClickResetFilter(e) {
     e.preventDefault();
     filters.reset();
-    demo.clearPricefilters();
-    demo.searchAgain();
+    demo.searchAgain(false);
   }
 
   function handlePerformSearch(event) {
@@ -408,10 +391,6 @@ $(document).ready(function() {
     }
   }
 
-  function updatePriceLabel(input, label) {
-    $(label).text($(input).val());
-  }
-
   function handleDisplayMoreClicked(e) {
     e.preventDefault();
     // remove display more button when loading more (it is then added back at the bottom)
@@ -421,6 +400,18 @@ $(document).ready(function() {
     * also sending "true" in order to tell displayMore that it was a click that triggered the function
     */
     demo.displayMore(true);
+  }
+
+  function handleGridSizeChange(gridSize) {
+    if(gridSize === 'big-grid') {
+      localStorage.setItem('gridSize', 'big-grid')
+      $(guiConfig.directResultsList).removeClass('small-grid');
+      $(guiConfig.recommendedResultsList).removeClass('small-grid');
+    } else {
+      localStorage.setItem('gridSize', 'small-grid')
+      $(guiConfig.directResultsList).addClass('small-grid');
+      $(guiConfig.recommendedResultsList).addClass('small-grid');
+    }
   }
 
   $(window).hashchange(function(e,data) {
@@ -439,21 +430,6 @@ $(document).ready(function() {
       utils.updateView(configName, currentHash, demo.handleHashChanged, demo.handleUpdateViewError, true);
     }
   }
-
-  $(guiConfig.priceslider).slider({
-    range: true,
-    min: 0,
-    max: 500,
-    step: 1,
-    slide: function( event, ui ) {
-      demo.updatePriceFilterValues(ui.values[0], ui.values[1]);
-    },
-    stop: function( event, ui ) {
-      demo.PriceFilter.min = ui.values[0];
-      demo.PriceFilter.max = ui.values[1];
-      demo.searchAgain();
-    }
-  });
 
   /*
   * Initialize autocomplete functionality
@@ -491,8 +467,6 @@ $(document).ready(function() {
   */
   $(document).on('click', '.display-more', handleDisplayMoreClicked);
   $('#resetfiltersbutton').on('click', handleClickResetFilter);
-  $('#minPrice').on('change', function(e){updatePriceLabel(e.target, '#minPriceLabel')});
-  $('#maxPrice').on('change', function(e){updatePriceLabel(e.target, '#maxPriceLabel')});
   $('#logo img').on('click', demo.resetView);
   $('.left-column-toggle').on('click', demo.toggleLeftColumn);
   $('.close-left-column').on('click', demo.toggleLeftColumn);
@@ -503,6 +477,14 @@ $(document).ready(function() {
     loop54.getRandomUserId();
     utils.resetShoppingCart(config.name, render.shoppingCart);
     utils.showNotification('You are now searching as a new user!', 2000);
+  });
+  $('.grid-size a').on('click', function(e) {
+    e.preventDefault();
+    if(e.currentTarget.className === 'big-grid') {
+      handleGridSizeChange('big-grid');
+    } else {
+      handleGridSizeChange('small-grid');
+    }
   });
   $(document).on('click', function(e) {
     if($('.shopping-cart').is(':visible')) {
@@ -519,4 +501,11 @@ $(document).ready(function() {
   });
 
   demo.setVersionNumber();
+  // if you have choosen a grid size for the result list already, load it and set it
+  if (typeof(Storage) !== "undefined") {
+    var gridSize = localStorage.getItem('gridSize');
+    if(gridSize) {
+      handleGridSizeChange(gridSize);
+    }
+  }
 });

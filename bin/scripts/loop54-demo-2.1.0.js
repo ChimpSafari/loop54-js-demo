@@ -2472,13 +2472,18 @@ var filters = {
   filtersFunctions: null,
   filtersContainer: null,
   configFilters: [],
-  visibleFilters: {},
+  showHiddenItems: {},
   list: {},
 
   init: function init(configFilters, filtersContainer, filtersFunctions) {
     this.configFilters = configFilters;
     this.filtersContainer = filtersContainer;
     this.filtersFunctions = filtersFunctions || null;
+
+    // add eventlistener for when the range slider is sliding, this will update the label with the current slide value
+    $(document).on('change', '.slider-value', function (e) {
+      $(e.target).prev('label').text(e.target.value);
+    });
   },
 
   getAll: function getAll() {
@@ -2486,77 +2491,229 @@ var filters = {
   },
 
   get: function get(key) {
-    if (this.list[key]) {
+    if (this.list[key] !== undefined) {
       return this.list[key];
     } else {
       return false;
     }
   },
 
-  update: function update(res, callback) {
+  update: function update(res, callback, demo) {
+    var numberOfItemsInVisibleContainer = 5;
     if (this.configFilters.length > 0 && this.filtersFunctions) {
       $(this.filtersFunctions).show();
     }
 
+    /*
+    * iterate through all the filters (facets) that are set in config
+    * for each filter, we will add filter items and place them in a "always visible" div
+    * or in a hidden div that can be expanded if you click "show all" or similar
+    */
     for (var i = 0; i < this.configFilters.length; i++) {
       var filterHeader = $('#filter_header_' + this.configFilters[i].name.replace(' ', '_'));
-      var filterDiv = $('#filter_' + this.configFilters[i].name.replace(' ', '_'));
-      var data = res[this.configFilters[i].responseParameter];
-      filterDiv.empty();
+      var filterContainer = $('#filter_' + this.configFilters[i].name.replace(' ', '_'));
+      var dataType = this.configFilters[i].type;
+      filterContainer.empty();
 
-      if (data && data.length > 0) {
-        filterHeader.show();
-        filterDiv.show();
-        var filterArray = [];
-        if (this.list[this.configFilters[i].requestParameter]) {
-          filterArray = this.list[this.configFilters[i].requestParameter];
+      /*
+      * check if the filter type is numberRange or string(default)
+      */
+      if (dataType == 'numberRange') {
+        var minValue, maxValue, selectedMinValue, selectedMaxValue, minValueParameter, maxValueParameter, currentMinValueFilter, currentMaxValueFilter;
+        minValueParameter = this.configFilters[i].responseParameter[0];
+        maxValueParameter = this.configFilters[i].responseParameter[1];
+        currentMinValueFilter = filters.get(this.configFilters[i].requestParameter[0]);
+        currentMaxValueFilter = filters.get(this.configFilters[i].requestParameter[1]);
+
+        /*
+        * set min/maxValue and selectedMin/MaxValue to the returned value
+        */
+        minValue = selectedMinValue = res[minValueParameter];
+        maxValue = selectedMaxValue = res[maxValueParameter];
+
+        /*
+        * if there is a range set already we want to change selectedMin/MaxValue to that value instead of min/max
+        */
+        if (typeof currentMinValueFilter == 'number' && typeof currentMaxValueFilter == 'number') {
+          selectedMinValue = currentMinValueFilter < minValue || currentMinValueFilter > maxValue ? minValue : currentMinValueFilter;
+          selectedMaxValue = currentMaxValueFilter > maxValue || currentMaxValueFilter < minValue ? maxValue : currentMaxValueFilter;
         }
-        var div = $('<div/>').addClass('alwaysvisible').appendTo(filterDiv);
-        for (var j = 0; j < data.length; j++) {
-          if (j == 5) {
-            div = $('<div/>').addClass('hideable').appendTo(filterDiv);
-            if (this.visibleFilters[this.configFilters[i].name]) {
-              div.show();
+
+        /*
+        * doublecheck that minValue and maxValue are present and set, so that we don't raise errors
+        */
+        if (typeof minValue == 'number' && typeof maxValue == 'number') {
+          var name = this.configFilters[i].name.replace(' ', '_'); // replace space in name so that we can use it as a selector
+          var rangeSlider = $('<div />', { id: name + 'slider' }).data('filterkey', this.configFilters[i].requestParameter);
+          rangeSlider.appendTo(filterContainer);
+
+          /*
+          * create the label and input elements that goes under the slider, only the label will be visible
+          */
+          $('<label />', { class: 'slider-label min' }).text(selectedMinValue).appendTo(filterContainer);
+          $('<input />', { class: 'slider-value min' }).val(selectedMinValue).appendTo(filterContainer);
+          $('<label />', { class: 'slider-label max' }).text(selectedMaxValue).appendTo(filterContainer);
+          $('<input />', { class: 'slider-value max' }).val(selectedMaxValue).appendTo(filterContainer);
+
+          /*
+          * initialize the slider on the container element
+          */
+          $('#' + name + 'slider').slider({
+            range: true,
+            min: minValue,
+            max: maxValue,
+            values: [selectedMinValue, selectedMaxValue],
+            step: 1,
+            slide: function slide(event, ui) {
+              $(event.target).siblings('input.slider-value.min').val(ui.values[0]).trigger('change');
+              $(event.target).siblings('input.slider-value.max').val(ui.values[1]).trigger('change');
+            },
+            stop: function stop(event, ui) {
+              /*
+              * the only function that is outside of this file, it is used to get the reference of this file when the range is changed.
+              * You can find the function in index.js
+              */
+              demo.addRangeFilter(ui.values, $(event.target).data('filterkey'));
             }
-            $('<a/>', { href: '#' }).html(filters.visibleFilters[this.configFilters[i].name] ? 'Hide' : 'Show all').addClass('showhide').data('div', div).data('filterName', this.configFilters[i].name).click(function (e) {
+          });
+
+          /*
+          * if minValue and maxValue are present, show the header and container
+          */
+          filterHeader.show();
+          filterContainer.addClass('slider-container').show();
+        } else {
+          filterHeader.hide();
+          filterContainer.hide();
+        }
+        /*
+        * continue if it was a string or undefined
+        */
+      } else {
+        var data = res[this.configFilters[i].responseParameter];
+        if (data && data.length > 0) {
+          var selectedFilters = []; // array to put all selected filter elements in
+          var notSelectedFilters = []; // array to put the rest of the filter elements in
+          var selectedFiltersArray = []; // this is a placeholder for the possible list of selected filters
+
+          if (this.list[this.configFilters[i].requestParameter]) {
+            // if there is a list of selected filters, use it to find the selected ones below
+            selectedFiltersArray = this.list[this.configFilters[i].requestParameter];
+          }
+
+          // create the container divs that we will use when displaying items
+          var alwaysVisibleContainer = $('<div/>').addClass('alwaysvisible').appendTo(filterContainer);
+          var hiddenContainer = $('<div/>').addClass('hideable').appendTo(filterContainer);
+
+          // iterate through the list of data items (filters) that was sent with the function call
+          for (var j = 0; j < data.length; j++) {
+
+            var selected = selectedFiltersArray.indexOf(data[j].Key) > -1; // if the current item is selected, it will be in selectedFiltersArray
+
+            // this is the actual item element
+            var checkbox = '<input type="checkbox"' + (selected ? ' checked' : '') + '>';
+            var filterItem = $('<a />', { href: '#' }).html('<span class="filter-number">(' + data[j].Value + ')</span>' + checkbox + data[j].Key).data('filterkey', this.configFilters[i].requestParameter).data('filtervalue', data[j].Key).addClass(selected ? 'selected' : '').click(function (e) {
+              e.preventDefault();
+              if (!$(this).hasClass('selected')) {
+                filters.add($(this).data('filterkey'), $(this).data('filtervalue'));
+                $(this).addClass('selected');
+                callback(false);
+              } else {
+                filters.remove($(this).data('filterkey'), $(this).data('filtervalue'));
+                $(this).removeClass('selected');
+                callback(false);
+              }
+            });
+
+            // if the item is selected, we will put it in the selectedFilters array
+            if (selected) {
+              selectedFilters.push(filterItem);
+            } else {
+              notSelectedFilters.push(filterItem);
+            }
+          }
+
+          /*
+          * The following if statements are to determine if items should go in the alwaysVisibleContainer
+          * or if they should stay in the hiddenContainer.
+          *
+          * Selected items will always go in the top container (alwaysVisibleContainer) since we always want
+          * them on top.
+          *
+          * if there is room for more items in the top container it will add notSelectedFilters until the limit is reached
+          * the limit is:
+          * as many selected filters as needed
+          * if there are no more then 4 selected filters we will add notSelectedFilters up to maximum 5 items
+          * the rest will go in the hiddenContainer and hidden by default
+          */
+          if (selectedFilters.length > 0) {
+            alwaysVisibleContainer.append(selectedFilters);
+          }
+
+          if (selectedFilters.length < 5 && notSelectedFilters.length > 0) {
+            for (var y = selectedFilters.length; y < 5; y++) {
+              alwaysVisibleContainer.append(notSelectedFilters.shift());
+            }
+          }
+
+          if (notSelectedFilters.length > 0) {
+            hiddenContainer.append(notSelectedFilters);
+          }
+
+          /*
+          * This part checks if the hiddenContainer should be shown.
+          * it also creates the "show all/hide" link in the bottom of the filterContainer
+          */
+          if (hiddenContainer.find('a').length > 0) {
+            if (this.showHiddenItems[this.configFilters[i].name]) {
+              hiddenContainer.show();
+            }
+            $('<a/>', { href: '#' }).html(filters.showHiddenItems[this.configFilters[i].name] ? 'Hide' : 'Show all').addClass('showhide').data('div', hiddenContainer).data('filterName', this.configFilters[i].name).click(function (e) {
               e.preventDefault();
               if ($(this).data('div').is(':visible')) {
-                filters.visibleFilters[$(this).data('filterName')] = false;
+                filters.showHiddenItems[$(this).data('filterName')] = false;
                 $(this).data('div').hide();
                 $(this).html('Show all');
               } else {
-                filters.visibleFilters[$(this).data('filterName')] = true;
+                filters.showHiddenItems[$(this).data('filterName')] = true;
                 $(this).data('div').show();
                 $(this).html('Hide');
               }
-            }).appendTo(filterDiv);
+            }).appendTo(filterContainer);
           }
 
-          div.append($('<a/>', { href: '#' }).html(data[j].Key + ' (' + data[j].Value + ')').data('filterkey', this.configFilters[i].requestParameter).data('filtervalue', data[j].Key).addClass(filterArray.indexOf(data[j].Key) > -1 ? 'selected' : '').click(function (e) {
-            e.preventDefault();
-            if (!$(this).hasClass('selected')) {
-              filters.add($(this).data('filterkey'), $(this).data('filtervalue'));
-              $(this).addClass('selected');
-              callback();
-            } else {
-              filters.remove($(this).data('filterkey'), $(this).data('filtervalue'));
-              $(this).removeClass('selected');
-              callback();
-            }
-          }));
+          // last we want to show everything
+          filterHeader.show();
+          filterContainer.show();
+        } else {
+          // if the filter (facet) was not present in this search result, we will hide the filterContainer
+          filterHeader.hide();
+          filterContainer.hide();
         }
-      } else {
-        filterHeader.hide();
-        filterDiv.hide();
       }
     }
-  },
+  }, // end of update function
 
   add: function add(key, value) {
-    if (!this.list[key]) {
-      this.list[key] = [];
+    var singleValue = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+    /*
+    * In order to support storing a single value (used by range slider) you can specify
+    * the variable "singleValue" with the function call if you want to store it as it is.
+    * If you don't specify anything the value will be added to an array under the key that is
+    * specified in the function call. This is the expected behavior when dealing with normal
+    * facets/filters since we want to be able to select multiple facets in one category.
+    */
+    if (singleValue) {
+      // used by range slider
+      this.list[key] = value;
+    } else {
+      // used by normal facets
+      if (!this.list[key]) {
+        this.list[key] = [];
+      }
+      this.list[key].push(value);
     }
-    this.list[key].push(value);
   },
 
   remove: function remove(key, value) {
@@ -2572,11 +2729,6 @@ var filters = {
 
   reset: function reset() {
     this.list = {};
-  },
-
-  updatePriceFilterValues: function updatePriceFilterValues(minPrice, maxPrice) {
-    $(guiConfig.pricesliderMinPriceInput).val(minPrice).trigger('change');
-    $(guiConfig.pricesliderMaxPriceInput).val(maxPrice).trigger('change');
   }
 };
 
@@ -2709,21 +2861,28 @@ var demo = {
       req.DirectResults_ToIndex = (options.page + 1) * config.directResultsPageSize - 1;
     }
 
-    if (config.recommendedResultsPageSize > 0) {
+    if (config.recommendedResultsPageSize > 0 && options.page > 0 && config.continousScrolling && searchFromHashChange) {
+      req.RecommendedResults_FromIndex = 0;
+      req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
+    } else if (config.recommendedResultsPageSize > 0) {
       req.RecommendedResults_FromIndex = config.recommendedResultsPageSize * options.page;
       req.RecommendedResults_ToIndex = (options.page + 1) * config.recommendedResultsPageSize - 1;
     }
 
-    if (this.PriceFilter.min && this.PriceFilter.max) {
-      req['Faceting.MinPrice'] = this.PriceFilter.min;
-      req['Faceting.MaxPrice'] = this.PriceFilter.max;
-    }
-
     for (var i = 0; i < config.filters.length; i++) {
-      var filterArray = _filters2.default.get(config.filters[i].requestParameter);
-      if (filterArray) {
-        if (filterArray.length > 0) {
-          req[config.filters[i].requestParameter] = filterArray;
+      if (config.filters[i].type == 'numberRange') {
+        for (var y = 0; y < config.filters[i].requestParameter.length; y++) {
+          var filterValue = _filters2.default.get(config.filters[i].requestParameter[y]);
+          if (filterValue) {
+            req[config.filters[i].requestParameter[y]] = filterValue;
+          }
+        }
+      } else {
+        var filterArray = _filters2.default.get(config.filters[i].requestParameter);
+        if (filterArray) {
+          if (filterArray.length > 0) {
+            req[config.filters[i].requestParameter] = filterArray;
+          }
         }
       }
     }
@@ -2740,7 +2899,6 @@ var demo = {
 
     if (options.clearFilters || options.facet || searchFromHashChange) {
       _filters2.default.reset();
-      this.clearPricefilters();
     }
 
     if (options.facet) {
@@ -2812,8 +2970,7 @@ var demo = {
           render.noRecommendedResults();
         }
 
-        self.updatePricefilters(data);
-        _filters2.default.update(data, demo.searchAgain);
+        _filters2.default.update(data, demo.searchAgain, demo);
 
         if (config.continousScrolling) {
           self.addDisplayMoreButton();
@@ -2826,39 +2983,9 @@ var demo = {
   },
 
   searchAgain: function searchAgain() {
-    demo.search(_extends({}, demo.previousSearch, { clearSearch: true, page: 0 }));
-  },
+    var clearSearch = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
 
-  /*
-  * Simple implementation of a range slider and price filters
-  * this will be be part of filters.js in the future
-  */
-
-  clearPricefilters: function clearPricefilters() {
-    this.PriceFilter = { min: null, max: null };
-  },
-
-  updatePriceFilterValues: function updatePriceFilterValues(minPrice, maxPrice) {
-    $(guiConfig.pricesliderMinPriceInput).val(minPrice).trigger('change');
-    $(guiConfig.pricesliderMaxPriceInput).val(maxPrice).trigger('change');
-  },
-
-  updatePricefilters: function updatePricefilters(res) {
-    if (config.productPriceMinAttribute && config.productPriceMaxAttribute) {
-      if (res[config.productPriceMinAttribute] && res[config.productPriceMaxAttribute]) {
-        var priceMin, priceMax, selectedPriceMin, selectedPriceMax;
-        priceMin = selectedPriceMin = res[config.productPriceMinAttribute];
-        priceMax = selectedPriceMax = res[config.productPriceMaxAttribute];
-
-        if (demo.PriceFilter.min && demo.PriceFilter.max) {
-          selectedPriceMin = demo.PriceFilter.min < priceMin || demo.PriceFilter.min > priceMax ? priceMin : demo.PriceFilter.min;
-          selectedPriceMax = demo.PriceFilter.max > priceMax || demo.PriceFilter.max < priceMin ? priceMax : demo.PriceFilter.max;
-        }
-        $(guiConfig.priceslider).slider("option", { min: priceMin, max: priceMax, values: [selectedPriceMin, selectedPriceMax] });
-        demo.updatePriceFilterValues(selectedPriceMin, selectedPriceMax);
-        $(guiConfig.pricesliderContainer).show();
-      }
-    }
+    demo.search(_extends({}, demo.previousSearch, { clearSearch: clearSearch, page: 0 }));
   },
 
   /*
@@ -2866,7 +2993,7 @@ var demo = {
   */
 
   setVersionNumber: function setVersionNumber() {
-    var version = '2.0.0';
+    var version = '2.1.0';
     $('#version-number').html('Loop54-demo v' + version);
   },
 
@@ -2980,6 +3107,17 @@ var demo = {
       $('.left-column').addClass('opened').removeClass('closed');
       $('.left-column-toggle').addClass('sm-hide').removeClass('sm-show');
     }
+  },
+
+  addRangeFilter: function addRangeFilter(values, requestParameters) {
+    /*
+    * this function is used to handle the range changes of the range slider
+    * for more information check filters.js
+    */
+    for (var i = 0; i < requestParameters.length; i++) {
+      _filters2.default.add(requestParameters[i], values[i], true);
+    }
+    demo.searchAgain(false); // trigger a new search without clearing all the content
   }
 };
 
@@ -2988,8 +3126,7 @@ $(document).ready(function () {
   function handleClickResetFilter(e) {
     e.preventDefault();
     _filters2.default.reset();
-    demo.clearPricefilters();
-    demo.searchAgain();
+    demo.searchAgain(false);
   }
 
   function handlePerformSearch(event) {
@@ -3011,10 +3148,6 @@ $(document).ready(function () {
     }
   }
 
-  function updatePriceLabel(input, label) {
-    $(label).text($(input).val());
-  }
-
   function handleDisplayMoreClicked(e) {
     e.preventDefault();
     // remove display more button when loading more (it is then added back at the bottom)
@@ -3024,6 +3157,18 @@ $(document).ready(function () {
     * also sending "true" in order to tell displayMore that it was a click that triggered the function
     */
     demo.displayMore(true);
+  }
+
+  function handleGridSizeChange(gridSize) {
+    if (gridSize === 'big-grid') {
+      localStorage.setItem('gridSize', 'big-grid');
+      $(guiConfig.directResultsList).removeClass('small-grid');
+      $(guiConfig.recommendedResultsList).removeClass('small-grid');
+    } else {
+      localStorage.setItem('gridSize', 'small-grid');
+      $(guiConfig.directResultsList).addClass('small-grid');
+      $(guiConfig.recommendedResultsList).addClass('small-grid');
+    }
   }
 
   $(window).hashchange(function (e, data) {
@@ -3042,21 +3187,6 @@ $(document).ready(function () {
       _utils2.default.updateView(configName, currentHash, demo.handleHashChanged, demo.handleUpdateViewError, true);
     }
   }
-
-  $(guiConfig.priceslider).slider({
-    range: true,
-    min: 0,
-    max: 500,
-    step: 1,
-    slide: function slide(event, ui) {
-      demo.updatePriceFilterValues(ui.values[0], ui.values[1]);
-    },
-    stop: function stop(event, ui) {
-      demo.PriceFilter.min = ui.values[0];
-      demo.PriceFilter.max = ui.values[1];
-      demo.searchAgain();
-    }
-  });
 
   /*
   * Initialize autocomplete functionality
@@ -3093,12 +3223,6 @@ $(document).ready(function () {
   */
   $(document).on('click', '.display-more', handleDisplayMoreClicked);
   $('#resetfiltersbutton').on('click', handleClickResetFilter);
-  $('#minPrice').on('change', function (e) {
-    updatePriceLabel(e.target, '#minPriceLabel');
-  });
-  $('#maxPrice').on('change', function (e) {
-    updatePriceLabel(e.target, '#maxPriceLabel');
-  });
   $('#logo img').on('click', demo.resetView);
   $('.left-column-toggle').on('click', demo.toggleLeftColumn);
   $('.close-left-column').on('click', demo.toggleLeftColumn);
@@ -3109,6 +3233,14 @@ $(document).ready(function () {
     _loop54JsLib2.default.getRandomUserId();
     _utils2.default.resetShoppingCart(config.name, render.shoppingCart);
     _utils2.default.showNotification('You are now searching as a new user!', 2000);
+  });
+  $('.grid-size a').on('click', function (e) {
+    e.preventDefault();
+    if (e.currentTarget.className === 'big-grid') {
+      handleGridSizeChange('big-grid');
+    } else {
+      handleGridSizeChange('small-grid');
+    }
   });
   $(document).on('click', function (e) {
     if ($('.shopping-cart').is(':visible')) {
@@ -3125,6 +3257,13 @@ $(document).ready(function () {
   });
 
   demo.setVersionNumber();
+  // if you have choosen a grid size for the result list already, load it and set it
+  if (typeof Storage !== "undefined") {
+    var gridSize = localStorage.getItem('gridSize');
+    if (gridSize) {
+      handleGridSizeChange(gridSize);
+    }
+  }
 });
 
 },{"./autocomplete.js":18,"./filters.js":19,"./render.js":22,"./utils.js":24,"es6-promise":14,"loop54-js-lib":16}],21:[function(require,module,exports){
@@ -3688,7 +3827,7 @@ var utils = {
       message: message,
       timeout: timeout
     };
-    if (notification.MaterialSnackbar) {
+    if (notification && notification.MaterialSnackbar) {
       notification.MaterialSnackbar.showSnackbar(data);
     }
   },
@@ -3795,7 +3934,6 @@ var utils = {
         var configName = utils.getHashValue('config', currentHash);
         //no demo config loaded or new config does not match
         if (config === null || configName !== config.name) {
-          console.log("hashchanged");
           _loader2.default.loadDemoConfig(configName, hashChangedSuccessCallback, hashChangedErrorCallback);
         } else {
           hashChangedSuccessCallback();
