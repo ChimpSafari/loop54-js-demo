@@ -58,7 +58,7 @@ let utils = {
       message: message,
       timeout: timeout
     };
-    if(notification.MaterialSnackbar) {
+    if(notification && notification.MaterialSnackbar) {
       notification.MaterialSnackbar.showSnackbar(data);
     }
   },
@@ -168,7 +168,6 @@ let utils = {
         var configName = utils.getHashValue('config', currentHash);
         //no demo config loaded or new config does not match
         if(config === null || configName !== config.name) {
-					console.log("hashchanged");
           loader.loadDemoConfig(configName, hashChangedSuccessCallback, hashChangedErrorCallback);
         }
         else {
