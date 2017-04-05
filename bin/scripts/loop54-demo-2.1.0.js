@@ -2821,11 +2821,6 @@ var demo = {
           demo.displayMore();
         }, true);
       }
-      if (location.hash === '') {
-        _utils2.default.setHash({
-          config: config.name
-        });
-      }
       _utils2.default.initShoppingCart(config.name, render.shoppingCart);
     }
 
@@ -2917,7 +2912,6 @@ var demo = {
     };
 
     _utils2.default.setHash({
-      config: config.name,
       page: options.page,
       section: 'search',
       query: options.query
@@ -3080,9 +3074,7 @@ var demo = {
 
   resetView: function resetView(e) {
     e.preventDefault();
-    _utils2.default.setHash({
-      config: config.name
-    });
+    _utils2.default.setHash({});
     _loop54JsLib2.default.getRandomUserId();
     _utils2.default.resetShoppingCart(config.name, render.shoppingCart);
     $(guiConfig.mainContainer).removeClass('three-columns two-columns');
@@ -3175,18 +3167,7 @@ $(document).ready(function () {
     _utils2.default.hashChanged(data.before.replace('#', ''), data.after.replace('#', ''), config, demo.handleHashChanged, demo.handleUpdateViewError);
   });
 
-  if (location.hash === '') {
-    // set default hash if none is set already
-    _utils2.default.updateView(null, '', demo.handleHashChanged, demo.handleUpdateViewError, false);
-  } else {
-    var currentHash = location.hash.replace('#', '');
-    var configName = _utils2.default.getHashValue('config', currentHash);
-    if (configName && configName !== config.name) {
-      _utils2.default.updateView(configName, currentHash, demo.handleHashChanged, demo.handleUpdateViewError, false);
-    } else if (configName) {
-      _utils2.default.updateView(configName, currentHash, demo.handleHashChanged, demo.handleUpdateViewError, true);
-    }
-  }
+  _utils2.default.updateView(null, '', demo.handleHashChanged, demo.handleUpdateViewError, false);
 
   /*
   * Initialize autocomplete functionality
